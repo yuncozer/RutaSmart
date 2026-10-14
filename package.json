@@ -21,6 +21,11 @@
     "supabase": "^2.48.3"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["supabase", "esbuild", "sharp", "unrs-resolver"]
+    "onlyBuiltDependencies": [
+      "supabase",
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
+    ]
   }
 }

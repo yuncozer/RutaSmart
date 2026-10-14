@@ -19,15 +19,15 @@ Content-Type: application/json
 - El servidor compara `sha256(secreto)` con `devices.secret_hash`.
 - Límite: 60 requests/minuto por serial (configurable). Si recibe `429`, respetar `Retry-After`.
 
-| Código | Significado | Qué hace el firmware |
-|---|---|---|
-| 200 | OK | — |
-| 400 | Cuerpo inválido | Descartar el lote (bug), registrar en log |
-| 401 | Credenciales inválidas o equipo retirado | Dejar de sincronizar; reintentar cada hora |
-| 403 | `device_disabled` | Conservar la cola; consultar `/config` periódicamente |
-| 409 | `device_not_assigned` | Conservar la cola; reintentar más tarde |
-| 429 | Rate limit | Esperar `Retry-After` |
-| 5xx / sin red | Error temporal | Reintentar con backoff exponencial (2s, 4s, 8s, 16s…) |
+| Código        | Significado                              | Qué hace el firmware                                  |
+| ------------- | ---------------------------------------- | ----------------------------------------------------- |
+| 200           | OK                                       | —                                                     |
+| 400           | Cuerpo inválido                          | Descartar el lote (bug), registrar en log             |
+| 401           | Credenciales inválidas o equipo retirado | Dejar de sincronizar; reintentar cada hora            |
+| 403           | `device_disabled`                        | Conservar la cola; consultar `/config` periódicamente |
+| 409           | `device_not_assigned`                    | Conservar la cola; reintentar más tarde               |
+| 429           | Rate limit                               | Esperar `Retry-After`                                 |
+| 5xx / sin red | Error temporal                           | Reintentar con backoff exponencial (2s, 4s, 8s, 16s…) |
 
 ## `POST /api/device/events`
 
@@ -44,7 +44,7 @@ en el momento del conteo, y se guarda en la microSD hasta que el servidor lo con
       "is_driver": false,
       "confidence": 0.91,
       "lat": 7.7669,
-      "lng": -72.2250
+      "lng": -72.225
     }
   ]
 }
@@ -59,7 +59,11 @@ en el momento del conteo, y se guarda en la microSD hasta que el servidor lo con
 Respuesta:
 
 ```json
-{ "accepted": 120, "duplicates": 3, "rejected": [{ "index": 7, "id": "…", "reason": "invalid_event" }] }
+{
+  "accepted": 120,
+  "duplicates": 3,
+  "rejected": [{ "index": 7, "id": "…", "reason": "invalid_event" }]
+}
 ```
 
 La inserción es **idempotente** (`ON CONFLICT (id) DO NOTHING`): reenviar un evento ya recibido no
@@ -69,7 +73,15 @@ lo duplica. Con un `200`, el firmware borra de la cola **todos** los eventos del
 ## `POST /api/device/heartbeat`
 
 ```json
-{ "battery": 87, "rssi": -67, "free_storage_mb": 12000, "firmware_version": "0.1.0", "model_version": "m-0.1", "lat": 7.76, "lng": -72.22 }
+{
+  "battery": 87,
+  "rssi": -67,
+  "free_storage_mb": 12000,
+  "firmware_version": "0.1.0",
+  "model_version": "m-0.1",
+  "lat": 7.76,
+  "lng": -72.22
+}
 ```
 
 Respuesta: `{ "ok": true, "server_time": "2026-10-14T12:20:00.000Z" }` (útil para corregir el RTC).
@@ -83,7 +95,12 @@ Respuesta: `{ "ok": true, "server_time": "2026-10-14T12:20:00.000Z" }` (útil pa
   "server_time": "2026-10-14T12:20:00Z",
   "sync_interval_s": 300,
   "driver_exclusion_enabled": false,
-  "firmware": { "update_available": true, "version": "0.2.0", "url": "https://…signed", "sha256": "…" }
+  "firmware": {
+    "update_available": true,
+    "version": "0.2.0",
+    "url": "https://…signed",
+    "sha256": "…"
+  }
 }
 ```
 
