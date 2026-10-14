@@ -84,3 +84,17 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+
+/* Colores de series de gráficos (validados para daltonismo; claro y oscuro) */
+:root {
+  --chart-in: #3b5ba5;
+  --chart-out: #d97706;
+  --chart-grid: #e2e8f0;
+  --chart-axis: #5b6b85;
+}
+.dark {
+  --chart-in: #6f8fd8;
+  --chart-out: #cc7a12;
+  --chart-grid: #1e3a6e;
+  --chart-axis: #9fb0cf;
+}
