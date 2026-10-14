@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+/* Modo oscuro por clase (.dark en <html>), controlado por next-themes */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Paleta de marca RutaSmart */
+@theme {
+  --color-navy-950: #06122a;
+  --color-navy-900: #0b1f3a;
+  --color-navy-800: #142a4f;
+  --color-navy-700: #1e3a6e;
+  --color-navy-500: #3b5ba5;
+  --color-navy-300: #8aa2d4;
+  --color-navy-100: #e6ecf7;
+  --color-navy-50: #f2f5fb;
+  --color-accent: #f5a524;
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* Tokens semánticos (estilo shadcn/ui) */
+:root {
+  --background: #f8fafc;
+  --foreground: #0b1f3a;
+  --card: #ffffff;
+  --card-foreground: #0b1f3a;
+  --muted: #eef2f8;
+  --muted-foreground: #5b6b85;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --primary: #0b1f3a;
+  --primary-foreground: #ffffff;
+  --secondary: #e6ecf7;
+  --secondary-foreground: #0b1f3a;
+  --ring: #3b5ba5;
+  --link: #3b5ba5;
+}
+
+.dark {
+  --background: #06122a;
+  --foreground: #e6ecf7;
+  --card: #0b1f3a;
+  --card-foreground: #e6ecf7;
+  --muted: #142a4f;
+  --muted-foreground: #9fb0cf;
+  --border: #1e3a6e;
+  --input: #2a4a82;
+  --primary: #e6ecf7;
+  --primary-foreground: #0b1f3a;
+  --secondary: #142a4f;
+  --secondary-foreground: #e6ecf7;
+  --ring: #8aa2d4;
+  --link: #8aa2d4;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-ring: var(--ring);
+  --color-link: var(--link);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
