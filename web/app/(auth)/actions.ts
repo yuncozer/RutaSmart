@@ -4,6 +4,12 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  CHANGE_PASSWORD_PATH,
+  MUST_CHANGE_PASSWORD_FLAG,
+  mustChangePassword,
+} from "@/lib/password-policy";
 
 export type FormState = { error?: string; success?: string } | undefined;
 
@@ -36,6 +42,9 @@ export async function login(_prev: FormState, formData: FormData): Promise<FormS
     password: parsed.data.password,
   });
   if (error || !data.user) return { error: "Correo o contraseña incorrectos." };
+
+  // Cuenta con contraseña temporal: primero debe crear la suya
+  if (mustChangePassword(data.user)) redirect(CHANGE_PASSWORD_PATH);
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -73,7 +82,39 @@ export async function updatePassword(_prev: FormState, formData: FormData): Prom
   const parsed = passwordSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
-  if (error) return { error: "No se pudo actualizar la contraseña. Solicita un nuevo enlace." };
-  redirect("/app");
+  if (error) {
+    return {
+      error:
+        error.code === "same_password"
+          ? "La nueva contraseña debe ser distinta de la actual."
+          : "No se pudo actualizar la contraseña. Intenta de nuevo o solicita un nuevo enlace.",
+    };
+  }
+
+  // Quita la marca de contraseña temporal (app_metadata solo se escribe con service role)
+  if (mustChangePassword(user)) {
+    const admin = createAdminClient();
+    const { error: metaError } = await admin.auth.admin.updateUserById(user.id, {
+      app_metadata: { [MUST_CHANGE_PASSWORD_FLAG]: false },
+    });
+    if (metaError)
+      return {
+        error: "La contraseña se cambió, pero no se pudo completar el registro. Intenta de nuevo.",
+      };
+    // Refresca el token para que la sesión ya no lleve la marca
+    await supabase.auth.refreshSession();
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_superadmin")
+    .eq("id", user.id)
+    .maybeSingle();
+  redirect(profile?.is_superadmin ? "/admin" : "/app");
 }

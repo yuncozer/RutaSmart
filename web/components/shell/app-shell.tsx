@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogOut } from "lucide-react";
+import { KeyRound, LogOut } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BottomNav, SidebarNav, type NavName } from "./nav-link";
@@ -42,7 +42,13 @@ export function AppShell({
         <div className="mt-auto rounded-xl bg-white/5 p-3">
           <p className="truncate text-sm font-medium text-white">{userName}</p>
           {userDetail ? <p className="text-navy-100/60 truncate text-xs">{userDetail}</p> : null}
-          <form action="/auth/salir" method="post" className="mt-2">
+          <Link
+            href="/actualizar-clave"
+            className="text-navy-100/70 mt-2 flex items-center gap-2 text-xs hover:text-white"
+          >
+            <KeyRound className="size-3" /> Cambiar contraseña
+          </Link>
+          <form action="/auth/salir" method="post" className="mt-1.5">
             <button className="text-navy-100/70 flex items-center gap-2 text-xs hover:text-white">
               <LogOut className="size-3" /> Cerrar sesión
             </button>
@@ -58,6 +64,14 @@ export function AppShell({
         <div className="flex items-center gap-1">
           {topRight}
           <ThemeToggle />
+          <Link
+            href="/actualizar-clave"
+            aria-label="Cambiar contraseña"
+            title="Cambiar contraseña"
+            className="hover:bg-muted grid size-10 place-items-center rounded-lg lg:hidden"
+          >
+            <KeyRound className="size-4" />
+          </Link>
           <form action="/auth/salir" method="post" className="lg:hidden">
             <button
               aria-label="Cerrar sesión"

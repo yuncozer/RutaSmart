@@ -2,6 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dbErrorMessage } from "@/lib/errors";
+import { MUST_CHANGE_PASSWORD_FLAG } from "@/lib/password-policy";
 
 /** Contraseña temporal legible (sin caracteres ambiguos). */
 export function temporaryPassword() {
@@ -39,6 +40,8 @@ export async function inviteMember(input: {
       password: tempPassword,
       email_confirm: true,
       user_metadata: { full_name: input.full_name || email.split("@")[0] },
+      // Obliga a cambiar la contraseña temporal en el primer ingreso
+      app_metadata: { [MUST_CHANGE_PASSWORD_FLAG]: true },
     });
     if (error || !data.user)
       return { error: `No se pudo crear el usuario: ${error?.message ?? ""}` };
@@ -57,7 +60,7 @@ export async function inviteMember(input: {
   return {
     userId,
     success: tempPassword
-      ? `Usuario ${email} creado como ${roleLabel}. Contraseña temporal: ${tempPassword} (compártela; se muestra una sola vez).`
+      ? `Usuario ${email} creado como ${roleLabel}. Contraseña temporal: ${tempPassword} (compártela; se muestra una sola vez). Al ingresar por primera vez deberá crear su propia contraseña.`
       : `${email} ya tenía cuenta y fue agregado como ${roleLabel}.`,
   };
 }
