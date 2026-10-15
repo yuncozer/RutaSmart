@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -104,6 +105,22 @@ const hardware = [
   { icon: Wifi, title: "Actualizable", text: "Mejoras del modelo por aire (OTA)" },
 ];
 
+/** Fotos de Pexels usadas en el landing (licencia Pexels; atribución de cortesía). */
+const PHOTO_CREDITS = [
+  {
+    name: "bayar-erdene B.",
+    url: "https://www.pexels.com/photo/city-nightscape-with-bus-and-illuminated-buildings-30174043/",
+  },
+  {
+    name: "Th2city Santana",
+    url: "https://www.pexels.com/photo/bus-on-street-in-rain-at-night-19961414/",
+  },
+  {
+    name: "Justin Hamilton",
+    url: "https://www.pexels.com/photo/man-in-white-t-shirt-standing-on-the-bus-205353/",
+  },
+];
+
 const faqs = [
   {
     q: "¿El equipo graba video de los pasajeros?",
@@ -170,8 +187,18 @@ export default async function LandingPage() {
 
       {/* ------------------------------------------------------------ Hero */}
       <section className="relative isolate overflow-hidden pb-20 pt-32 sm:pt-40 lg:pb-32">
-        {/* Fondo: aurora + grilla */}
+        {/* Fondo: foto + aurora + grilla */}
         <div className="pointer-events-none absolute inset-0 -z-10">
+          <Image
+            src="/images/hero-bus-noche.webp"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-[70%_center] opacity-60"
+          />
+          <div className="from-navy-950 via-navy-950/85 to-navy-950/30 absolute inset-0 bg-gradient-to-r" />
+          <div className="from-navy-950/60 to-navy-950/0 absolute inset-x-0 top-0 h-48 bg-gradient-to-b" />
           <div className="animate-aurora bg-electric/35 absolute -top-40 left-1/4 size-[38rem] rounded-full blur-[120px]" />
           <div className="animate-aurora bg-cyan/20 absolute -right-40 top-20 size-[30rem] rounded-full blur-[120px] [animation-delay:-6s]" />
           <div className="animate-aurora bg-accent/15 absolute -left-40 bottom-0 size-[26rem] rounded-full blur-[120px] [animation-delay:-12s]" />
@@ -297,6 +324,38 @@ export default async function LandingPage() {
                 <p className="mt-2 text-sm leading-relaxed text-white/55">{text}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------ Franja con foto */}
+      <section className="relative isolate overflow-hidden">
+        <Image
+          src="/images/bus-calle-lluvia.webp"
+          alt="Bus urbano circulando de noche bajo la lluvia"
+          fill
+          sizes="100vw"
+          className="-z-10 object-cover"
+        />
+        <div className="from-navy-950 via-navy-950/70 to-navy-950/20 absolute inset-0 -z-10 bg-gradient-to-r" />
+        <div className="from-navy-950 to-navy-950/0 absolute inset-x-0 top-0 -z-10 h-32 bg-gradient-to-b" />
+        <div className="from-navy-950 to-navy-950/0 absolute inset-x-0 bottom-0 -z-10 h-32 bg-gradient-to-t" />
+        <div className="mx-auto max-w-6xl px-4 py-28 sm:py-40">
+          <div className="reveal max-w-xl">
+            <p className="text-cyan text-sm font-semibold uppercase tracking-widest">
+              Para rutas reales
+            </p>
+            <p className="mt-4 text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
+              Lluvia, noche, huecos y zonas sin señal.{" "}
+              <span className="text-white/50">RutaSmart sigue contando.</span>
+            </p>
+            <div className="mt-8 flex flex-wrap gap-2 text-sm">
+              {["Visión infrarroja", "Cola local sin conexión", "Batería de respaldo"].map((t) => (
+                <span key={t} className="glass rounded-full px-3 py-1.5 text-white/80">
+                  {t}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -431,6 +490,14 @@ export default async function LandingPage() {
       {/* ------------------------------------------------------------ CTA final */}
       <section id="contacto" className="px-4 pb-24">
         <div className="reveal from-navy-800 via-navy-900 to-navy-950 relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-gradient-to-br px-6 py-16 text-center ring-1 ring-white/10 sm:px-16 sm:py-20">
+          <Image
+            src="/images/interior-pasajeros.webp"
+            alt=""
+            fill
+            sizes="(min-width: 1152px) 1152px, 100vw"
+            className="object-cover opacity-30"
+          />
+          <div className="from-navy-950/90 via-navy-900/80 to-navy-950/90 absolute inset-0 bg-gradient-to-br" />
           <div className="bg-electric/30 absolute -top-24 left-1/2 size-96 -translate-x-1/2 rounded-full blur-[100px]" />
           <div className="bg-grid mask-radial absolute inset-0 opacity-50" />
           <div className="relative">
@@ -462,10 +529,29 @@ export default async function LandingPage() {
       <footer className="border-t border-white/10">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-10 text-sm text-white/45 sm:flex-row">
           <Logo light />
-          <p className="flex items-center gap-2">
-            <ShieldCheck className="size-4" /> Sin imágenes, solo conteos · RutaSmart ©{" "}
-            {new Date().getFullYear()}
-          </p>
+          <div className="flex flex-col items-center gap-1 sm:items-end">
+            <p className="flex items-center gap-2">
+              <ShieldCheck className="size-4" /> Sin imágenes, solo conteos · RutaSmart ©{" "}
+              {new Date().getFullYear()}
+            </p>
+            <p className="text-xs text-white/30">
+              Fotos:{" "}
+              {PHOTO_CREDITS.map((c, i) => (
+                <span key={c.url}>
+                  {i > 0 ? ", " : null}
+                  <a
+                    href={c.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-white/60"
+                  >
+                    {c.name}
+                  </a>
+                </span>
+              ))}{" "}
+              en Pexels
+            </p>
+          </div>
         </div>
       </footer>
     </div>
