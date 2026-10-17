@@ -39,7 +39,7 @@ export default async function BusesPage() {
 
   return (
     <>
-      <PageHeader title="Buses" description="Todas las unidades registradas." />
+      <PageHeader eyebrow="Unidades" title="Buses" description="Todas las unidades registradas." />
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>Registrar bus</CardTitle>

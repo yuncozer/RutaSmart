@@ -63,6 +63,7 @@ export default async function ReportsPage({
   return (
     <>
       <PageHeader
+        eyebrow="Descargas"
         title="Reportes"
         description="Pasajeros por día y por bus. Los cruces del conductor no suman."
       />

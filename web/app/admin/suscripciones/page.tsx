@@ -45,7 +45,11 @@ export default async function SubscriptionsPage({
 
   return (
     <>
-      <PageHeader title="Suscripciones" description="Una suscripción activa por organización." />
+      <PageHeader
+        eyebrow="Cobros"
+        title="Suscripciones"
+        description="Una suscripción activa por organización."
+      />
 
       <details className="bg-card mb-6 rounded-2xl border" open={Boolean(nueva)}>
         <summary className="flex cursor-pointer list-none items-center gap-2 p-4 font-medium">

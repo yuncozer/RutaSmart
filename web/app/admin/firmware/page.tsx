@@ -38,6 +38,7 @@ export default async function FirmwarePage() {
   return (
     <>
       <PageHeader
+        eyebrow="Equipos"
         title="Firmware"
         description="Los equipos descargan por OTA la última versión marcada como estable (si es más nueva que la instalada)."
       />

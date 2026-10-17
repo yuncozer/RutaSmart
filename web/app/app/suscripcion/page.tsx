@@ -43,7 +43,7 @@ export default async function SubscriptionPage() {
   if (!sub) {
     return (
       <>
-        <PageHeader title="Suscripción" />
+        <PageHeader eyebrow="Tu cuenta" title="Suscripción" />
         <p className="text-muted-foreground">Tu organización no tiene suscripción. Contáctanos.</p>
       </>
     );
@@ -59,7 +59,7 @@ export default async function SubscriptionPage() {
 
   return (
     <>
-      <PageHeader title="Suscripción" description={ctx.org.name} />
+      <PageHeader eyebrow="Tu cuenta" title="Suscripción" description={ctx.org.name} />
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="flex-row items-start justify-between">

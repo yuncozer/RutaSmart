@@ -43,7 +43,11 @@ export default async function OrganizationsPage() {
 
   return (
     <>
-      <PageHeader title="Organizaciones" description="Clientes de RutaSmart RU7." />
+      <PageHeader
+        eyebrow="Clientes"
+        title="Organizaciones"
+        description="Clientes de RutaSmart RU7."
+      />
 
       <details className="bg-card group mb-6 rounded-2xl border">
         <summary className="flex cursor-pointer list-none items-center gap-2 p-4 font-medium">

@@ -1,17 +1,20 @@
 import Link from "next/link";
 import {
   ArrowDownRight,
-  ArrowUpRight,
   Bell,
   BatteryMedium,
   Bus,
   ChevronRight,
+  FileDown,
+  MapPin,
+  TrendingDown,
+  TrendingUp,
   UserX,
   Users,
 } from "lucide-react";
-import { PageHeader } from "@/components/page-header";
+import { PageHero, heroButton } from "@/components/page-hero";
 import { StatCard } from "@/components/stat-card";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/empty-state";
 import { ActionButton } from "@/components/action-form";
@@ -20,7 +23,15 @@ import { OnlineDot } from "@/components/status-badges";
 import { FeatureLocked } from "@/components/app/subscription-gate";
 import { requireAppContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { addDays, formatDate, formatNumber, localeFor, timeAgo, todayIn } from "@/lib/format";
+import {
+  addDays,
+  formatDate,
+  formatNumber,
+  greetingIn,
+  localeFor,
+  timeAgo,
+  todayIn,
+} from "@/lib/format";
 import {
   dailySeries,
   homeSummary,
@@ -29,6 +40,7 @@ import {
   totalsFor,
 } from "@/lib/dashboard";
 import { hasFeature } from "@/lib/plans";
+import { cn } from "@/lib/utils";
 import type { Bus as BusRow, Device } from "@/lib/types";
 import { markAlertRead } from "./actions";
 
@@ -83,16 +95,64 @@ export default async function ClientHomePage() {
     return d && d.last_seen_at && Date.now() - new Date(d.last_seen_at).getTime() < 3600_000;
   }).length;
 
+  const isOwner = ctx.role === "owner";
+  const firstName = ctx.profile.full_name?.split(" ")[0];
+  // Sin subidas todavía (madrugada) no tiene sentido decir "100 % menos que ayer"
+  const hasToday = summary.today.ins > 0;
+  const change = comparisons && hasToday ? summary.vsYesterday : null;
+
   return (
     <>
-      <PageHeader
-        title={
-          ctx.role === "driver"
-            ? `Hola, ${ctx.profile.full_name?.split(" ")[0] ?? ""}`
-            : "Pasajeros de hoy"
+      <PageHero
+        image={isOwner ? "/images/panel-parada.webp" : "/images/panel-conductor.webp"}
+        eyebrow={formatDate(new Date(), { country, timezone: ctx.org.timezone })}
+        title={`${greetingIn(ctx.org.timezone)}${firstName ? `, ${firstName}` : ""}`}
+        description={
+          isOwner
+            ? `Así va ${ctx.org.name} hoy. Toca un bus para ver su detalle o abre el mapa para saber dónde está cada uno.`
+            : "Aquí ves los pasajeros de tu bus y su recorrido de hoy."
         }
-        description={`${ctx.org.name} · ${formatDate(new Date(), { country, timezone: ctx.org.timezone })}`}
-      />
+        aside={
+          <div className="glass min-w-60 rounded-2xl p-5">
+            <p className="flex items-center gap-2 text-sm text-white/70">
+              <Users className="text-electric size-4" /> Pasajeros que subieron hoy
+            </p>
+            <p className="mt-2 text-5xl font-semibold tabular-nums tracking-tight">
+              {formatNumber(summary.today.ins, country)}
+            </p>
+            {change !== null && change !== undefined ? (
+              <p
+                className={cn(
+                  "mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium",
+                  change >= 0 ? "bg-emerald-400/15 text-emerald-300" : "bg-red-400/15 text-red-300",
+                )}
+              >
+                {change >= 0 ? (
+                  <TrendingUp className="size-3.5" />
+                ) : (
+                  <TrendingDown className="size-3.5" />
+                )}
+                {Math.abs(change)}% {change >= 0 ? "más" : "menos"} que ayer
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-white/50">
+                {hasToday
+                  ? "Se actualiza solo durante el día"
+                  : "Aún no hay subidas registradas hoy"}
+              </p>
+            )}
+          </div>
+        }
+      >
+        <Link href="/app/mapa" className={cn(heroButton, "text-navy-950 bg-white")}>
+          <MapPin className="size-4" /> {isOwner ? "Ver mapa en vivo" : "Ver mi bus en el mapa"}
+        </Link>
+        {isOwner ? (
+          <Link href="/app/reportes" className={cn(heroButton, "glass text-white")}>
+            <FileDown className="size-4" /> Descargar reporte
+          </Link>
+        ) : null}
+      </PageHero>
 
       {error ? (
         <Alert variant="danger" className="mb-4">
@@ -100,18 +160,18 @@ export default async function ClientHomePage() {
         </Alert>
       ) : null}
 
-      {alerts && alerts.length > 0 && ctx.role === "owner" ? (
+      {alerts && alerts.length > 0 && isOwner ? (
         <Card className="border-accent/40 mb-4">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
-              <Bell className="text-accent size-4" /> Alertas
+              <Bell className="text-accent size-4" /> Avisos importantes
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {alerts.map((a) => (
               <div
                 key={a.id}
-                className="bg-muted/60 flex items-start justify-between gap-3 rounded-lg p-3 text-sm"
+                className="bg-muted/60 flex items-start justify-between gap-3 rounded-xl p-3 text-sm"
               >
                 <div>
                   <p>{a.message}</p>
@@ -126,42 +186,41 @@ export default async function ClientHomePage() {
         </Card>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard
-          label="Subidas hoy"
-          value={formatNumber(summary.today.ins, country)}
-          icon={ArrowUpRight}
-          change={comparisons ? summary.vsYesterday : undefined}
-          hint={comparisons ? "vs. ayer" : undefined}
-        />
-        <StatCard
-          label="Bajadas hoy"
+          label="Bajaron hoy"
           value={formatNumber(summary.today.outs, country)}
           icon={ArrowDownRight}
         />
         <StatCard
-          label="Mismo día semana pasada"
-          value={comparisons ? formatNumber(summary.lastWeek.ins, country) : "—"}
+          label="Subieron ayer"
+          value={formatNumber(summary.yesterday.ins, country)}
           icon={Users}
-          change={comparisons ? summary.vsLastWeek : undefined}
-          hint={comparisons ? "hoy vs. ese día" : "Disponible en plan Pro"}
         />
         <StatCard
-          label="Equipos en línea"
+          label="Mismo día, semana pasada"
+          value={comparisons ? formatNumber(summary.lastWeek.ins, country) : "—"}
+          icon={Users}
+          change={comparisons && hasToday ? summary.vsLastWeek : undefined}
+          hint={comparisons ? (hasToday ? "hoy vs. ese día" : undefined) : "Disponible en plan Pro"}
+        />
+        <StatCard
+          label="Equipos conectados"
           value={`${online} / ${busList.length}`}
           icon={Bus}
           hint={
             hasFeature(f, "driver_exclusion")
-              ? `${summary.today.driver} cruces del conductor hoy (excluidos)`
+              ? `${summary.today.driver} cruces del conductor hoy (no se suman)`
               : undefined
           }
         />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-5">
+      <div className="mt-4 grid gap-4 sm:mt-6 sm:gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Subidas y bajadas · últimos 7 días</CardTitle>
+            <CardTitle>Pasajeros de los últimos 7 días</CardTitle>
+            <CardDescription>Cuántas personas subieron y bajaron cada día</CardDescription>
           </CardHeader>
           <CardContent>
             <CountsChart data={week} />
@@ -170,7 +229,7 @@ export default async function ClientHomePage() {
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>{ctx.role === "driver" ? "Mi bus" : "Buses"}</CardTitle>
+            <CardTitle>{isOwner ? "Tus buses hoy" : "Mi bus"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {busList.length === 0 ? (
@@ -187,9 +246,9 @@ export default async function ClientHomePage() {
                   <Link
                     key={b.id}
                     href={`/app/buses/${b.id}`}
-                    className="hover:bg-muted flex items-center gap-3 rounded-xl border p-3 transition-colors"
+                    className="hover:border-navy-300 hover:bg-muted/50 group flex items-center gap-3 rounded-2xl border p-3 transition-colors"
                   >
-                    <div className="bg-navy-100 text-navy-900 dark:bg-navy-800 dark:text-navy-100 grid size-10 shrink-0 place-items-center rounded-lg">
+                    <div className="icon-chip text-navy-500 dark:text-electric grid size-11 shrink-0 place-items-center rounded-xl">
                       <Bus className="size-5" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -208,10 +267,12 @@ export default async function ClientHomePage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold">{formatNumber(t.ins, country)}</p>
+                      <p className="text-xl font-semibold tabular-nums">
+                        {formatNumber(t.ins, country)}
+                      </p>
                       <p className="text-muted-foreground text-xs">subidas</p>
                     </div>
-                    <ChevronRight className="text-muted-foreground size-4" />
+                    <ChevronRight className="text-muted-foreground size-4 transition-transform group-hover:translate-x-0.5" />
                   </Link>
                 );
               })

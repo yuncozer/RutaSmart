@@ -72,6 +72,7 @@ export default async function UsersPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Tu equipo"
         title="Usuarios"
         description={`${list.length} de ${maxUsers} usuario${maxUsers === 1 ? "" : "s"} de tu plan. Los conductores solo ven los buses asignados.`}
       />

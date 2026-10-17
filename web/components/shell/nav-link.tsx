@@ -76,13 +76,25 @@ export function SidebarNav({ nav, keys }: { nav: NavName; keys?: string[] }) {
             key={item.href}
             href={item.href}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+              "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
               active
-                ? "bg-white/10 font-medium text-white"
-                : "text-navy-100/70 hover:bg-white/5 hover:text-white",
+                ? "bg-white/10 font-medium text-white ring-1 ring-white/10"
+                : "text-white/60 hover:bg-white/5 hover:text-white",
             )}
           >
-            <item.icon className="size-4" />
+            {active ? (
+              <span className="bg-electric absolute -left-5 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full" />
+            ) : null}
+            <span
+              className={cn(
+                "grid size-8 place-items-center rounded-lg transition-colors",
+                active
+                  ? "from-electric/40 to-cyan/15 bg-gradient-to-br text-white"
+                  : "bg-white/5 group-hover:bg-white/10",
+              )}
+            >
+              <item.icon className="size-4" />
+            </span>
             {item.label}
           </Link>
         );
@@ -96,8 +108,8 @@ export function BottomNav({ nav, keys }: { nav: NavName; keys?: string[] }) {
   const pathname = usePathname();
   const items = itemsFor(nav, keys);
   return (
-    <nav className="bg-card/95 fixed inset-x-0 bottom-0 z-30 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
-      <div className="mx-auto flex max-w-lg overflow-x-auto">
+    <nav className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
+      <div className="bg-navy-950/95 shadow-navy-950/30 mx-auto flex max-w-lg overflow-x-auto rounded-2xl p-1.5 shadow-xl ring-1 ring-white/10 backdrop-blur-xl">
         {items.map((item) => {
           const active = isActive(pathname, item);
           return (
@@ -105,11 +117,11 @@ export function BottomNav({ nav, keys }: { nav: NavName; keys?: string[] }) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex min-w-16 flex-1 flex-col items-center gap-0.5 px-2 py-2 text-[11px]",
-                active ? "text-navy-500 dark:text-navy-300 font-medium" : "text-muted-foreground",
+                "flex min-w-16 flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-[11px] transition-colors",
+                active ? "bg-white/10 font-medium text-white" : "text-white/55",
               )}
             >
-              <item.icon className="size-5" />
+              <item.icon className={cn("size-5", active && "text-electric")} />
               {item.label}
             </Link>
           );

@@ -5,7 +5,7 @@ export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInp
   return (
     <input
       className={cn(
-        "border-input bg-card placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-lg border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50",
+        "border-input bg-card placeholder:text-muted-foreground focus-visible:ring-ring flex h-11 w-full rounded-xl border px-3.5 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50",
         className,
       )}
       {...props}
@@ -20,7 +20,7 @@ export function Textarea({
   return (
     <textarea
       className={cn(
-        "border-input bg-card placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-20 w-full rounded-lg border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2",
+        "border-input bg-card placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-20 w-full rounded-xl border px-3.5 py-2 text-sm focus-visible:outline-none focus-visible:ring-2",
         className,
       )}
       {...props}
@@ -32,7 +32,7 @@ export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLS
   return (
     <select
       className={cn(
-        "border-input bg-card focus-visible:ring-ring flex h-10 w-full rounded-lg border px-3 text-sm focus-visible:outline-none focus-visible:ring-2",
+        "border-input bg-card focus-visible:ring-ring flex h-11 w-full rounded-xl border px-3.5 text-sm focus-visible:outline-none focus-visible:ring-2",
         className,
       )}
       {...props}

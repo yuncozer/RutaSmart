@@ -41,6 +41,7 @@ export default async function PaymentsPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Cobros"
         title="Pagos"
         description={`Registro manual (pago móvil, Zelle, Binance, transferencia, efectivo). Últimos 30 días: ${formatUsd(total30)}.`}
       />

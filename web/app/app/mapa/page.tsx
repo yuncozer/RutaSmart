@@ -18,7 +18,7 @@ export default async function LiveMapPage() {
   if (!hasFeature(ctx.access.features, "gps_tracking")) {
     return (
       <>
-        <PageHeader title="Mapa en vivo" />
+        <PageHeader eyebrow="GPS en vivo" title="Mapa en vivo" />
         <FeatureLocked feature="gps_tracking" title="Ubicación GPS de la flota" />
       </>
     );
@@ -59,6 +59,7 @@ export default async function LiveMapPage() {
   return (
     <>
       <PageHeader
+        eyebrow="GPS en vivo"
         title="Mapa en vivo"
         description="Ubicación GPS de cada bus y las paradas con más movimiento de los últimos 7 días."
       />

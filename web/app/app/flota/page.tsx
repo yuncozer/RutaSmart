@@ -18,7 +18,11 @@ export default async function FleetPage() {
   if (!hasFeature(ctx.access.features, "fleet_view")) {
     return (
       <>
-        <PageHeader title="Flota" description="Comparativa de todos tus buses." />
+        <PageHeader
+          eyebrow="Comparativa"
+          title="Flota"
+          description="Comparativa de todos tus buses."
+        />
         <FeatureLocked feature="fleet_view" title="Vista multi-bus de la flota" />
       </>
     );
@@ -71,7 +75,11 @@ export default async function FleetPage() {
 
   return (
     <>
-      <PageHeader title="Flota" description="Últimos 7 días comparados con los 7 anteriores." />
+      <PageHeader
+        eyebrow="Comparativa"
+        title="Flota"
+        description="Últimos 7 días comparados con los 7 anteriores."
+      />
       <Card>
         <CardHeader>
           <CardTitle>{table.length} buses activos</CardTitle>

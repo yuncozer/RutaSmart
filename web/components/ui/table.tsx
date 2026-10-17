@@ -10,15 +10,20 @@ export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTab
 }
 export function THead(props: React.HTMLAttributes<HTMLTableSectionElement>) {
   return (
-    <thead className="text-muted-foreground border-b text-left text-xs uppercase" {...props} />
+    <thead
+      className="text-muted-foreground border-b text-left text-[11px] uppercase tracking-wider"
+      {...props}
+    />
   );
 }
 export function TBody(props: React.HTMLAttributes<HTMLTableSectionElement>) {
-  return <tbody className="divide-y" {...props} />;
+  return (
+    <tbody className="[&_tr:hover]:bg-muted/40 divide-y [&_tr]:transition-colors" {...props} />
+  );
 }
 export function TH({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
-  return <th className={cn("whitespace-nowrap px-3 py-2 font-medium", className)} {...props} />;
+  return <th className={cn("whitespace-nowrap px-3 py-2.5 font-semibold", className)} {...props} />;
 }
 export function TD({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn("px-3 py-2.5 align-middle", className)} {...props} />;
+  return <td className={cn("px-3 py-3 align-middle", className)} {...props} />;
 }

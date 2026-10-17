@@ -17,6 +17,7 @@ export default async function PlansPage() {
   return (
     <>
       <PageHeader
+        eyebrow="Catálogo"
         title="Planes"
         description="Precio mensual por bus y funciones incluidas. Los cambios aplican de inmediato a todos los clientes del plan."
       />

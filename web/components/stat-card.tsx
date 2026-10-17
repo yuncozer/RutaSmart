@@ -20,16 +20,20 @@ export function StatCard({
   className?: string;
 }) {
   return (
-    <Card className={cn("p-4", className)}>
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-muted-foreground text-sm">{label}</p>
-        {Icon ? <Icon className="text-navy-500 size-4" /> : null}
+    <Card className={cn("p-4 sm:p-5", className)}>
+      <div className="flex items-center gap-3">
+        {Icon ? (
+          <span className="icon-chip text-navy-500 dark:text-electric grid size-9 shrink-0 place-items-center rounded-xl">
+            <Icon className="size-[18px]" />
+          </span>
+        ) : null}
+        <p className="text-muted-foreground text-sm leading-tight">{label}</p>
       </div>
-      <p className="mt-1 text-2xl font-bold tracking-tight">{value}</p>
+      <p className="mt-3 text-3xl font-semibold tabular-nums tracking-tight">{value}</p>
       {change !== undefined ? (
         <p
           className={cn(
-            "mt-1 flex items-center gap-1 text-xs",
+            "mt-1.5 flex items-center gap-1 text-xs",
             change === null
               ? "text-muted-foreground"
               : change >= 0
@@ -42,17 +46,20 @@ export function StatCard({
           ) : (
             <>
               {change >= 0 ? (
-                <TrendingUp className="size-3" />
+                <TrendingUp className="size-3.5" />
               ) : (
-                <TrendingDown className="size-3" />
+                <TrendingDown className="size-3.5" />
               )}
-              {change > 0 ? "+" : ""}
-              {change}% {hint}
+              <span className="font-medium">
+                {change > 0 ? "+" : ""}
+                {change}%
+              </span>{" "}
+              {hint}
             </>
           )}
         </p>
       ) : hint ? (
-        <p className="text-muted-foreground mt-1 text-xs">{hint}</p>
+        <p className="text-muted-foreground mt-1.5 text-xs">{hint}</p>
       ) : null}
     </Card>
   );

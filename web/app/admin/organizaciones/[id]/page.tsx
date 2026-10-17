@@ -75,6 +75,7 @@ export default async function OrganizationDetailPage({
         <ArrowLeft className="size-4" /> Organizaciones
       </Link>
       <PageHeader
+        eyebrow="Cliente"
         title={org.name}
         description={`${org.country === "VE" ? "Venezuela" : "Colombia"} · ${org.timezone}`}
       />

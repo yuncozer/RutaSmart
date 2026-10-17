@@ -68,6 +68,7 @@ export default async function SubscriptionDetailPage({
         <ArrowLeft className="size-4" /> Suscripciones
       </Link>
       <PageHeader
+        eyebrow="Cobros"
         title={sub.organization.name}
         description={
           <span className="flex flex-wrap items-center gap-2">

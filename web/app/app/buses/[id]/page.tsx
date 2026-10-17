@@ -150,6 +150,7 @@ export default async function BusDetailPage({
         <ArrowLeft className="size-4" /> Inicio
       </Link>
       <PageHeader
+        eyebrow="Detalle del bus"
         title={`${bus.plate}${bus.alias ? ` · ${bus.alias}` : ""}`}
         description={bus.route_name ?? undefined}
         actions={

@@ -63,3 +63,15 @@ export function percentChange(current: number, previous: number): number | null 
   if (!previous) return null;
   return Math.round(((current - previous) / previous) * 1000) / 10;
 }
+
+/** Saludo según la hora local de la organización. */
+export function greetingIn(timezone: string, base = new Date()) {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: timezone })
+      .formatToParts(base)
+      .find((p) => p.type === "hour")?.value ?? 12,
+  );
+  if (hour >= 5 && hour < 12) return "Buenos días";
+  if (hour >= 12 && hour < 19) return "Buenas tardes";
+  return "Buenas noches";
+}

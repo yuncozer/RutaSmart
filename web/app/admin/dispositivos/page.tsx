@@ -57,7 +57,11 @@ export default async function DevicesPage({
 
   return (
     <>
-      <PageHeader title="Dispositivos" description="Equipos ESP32-S3 instalados en los buses." />
+      <PageHeader
+        eyebrow="Equipos"
+        title="Dispositivos"
+        description="Equipos ESP32-S3 instalados en los buses."
+      />
 
       <Card className="mb-6">
         <CardHeader>

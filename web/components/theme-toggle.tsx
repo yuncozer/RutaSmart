@@ -11,7 +11,9 @@ export function ThemeToggle() {
     <Button
       variant="ghost"
       size="icon"
-      aria-label={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+      // Etiqueta fija: el tema solo se conoce en el cliente (evita error de hidratación)
+      aria-label="Cambiar entre modo claro y oscuro"
+      title="Modo claro / oscuro"
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
       <Sun className="hidden dark:block" />

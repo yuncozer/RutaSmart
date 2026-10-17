@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { Activity, Building2, Bus, Cpu, DollarSign, WifiOff } from "lucide-react";
-import { PageHeader } from "@/components/page-header";
+import { Activity, Building2, Bus, Cpu, DollarSign, Plus, Receipt, WifiOff } from "lucide-react";
+import { PageHero, heroButton } from "@/components/page-hero";
 import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TBody, TD, TH, THead } from "@/components/ui/table";
 import { SubscriptionBadge } from "@/components/status-badges";
 import { createClient } from "@/lib/supabase/server";
 import { formatNumber, formatUsd, timeAgo } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { SubscriptionStatus } from "@/lib/types";
 
 export const metadata = { title: "Resumen" };
@@ -40,8 +41,33 @@ export default async function AdminOverviewPage() {
 
   return (
     <>
-      <PageHeader title="Resumen" description="Estado general de RutaSmart RU7." />
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <PageHero
+        image="/images/panel-atardecer.webp"
+        eyebrow="Administración"
+        title="Resumen de RutaSmart RU7"
+        description="Clientes, equipos y cobros en un solo lugar. Revisa abajo los equipos sin conexión y las suscripciones por vencer."
+        aside={
+          <div className="glass min-w-60 rounded-2xl p-5">
+            <p className="flex items-center gap-2 text-sm text-white/70">
+              <Activity className="text-electric size-4" /> Pasajeros contados (24 h)
+            </p>
+            <p className="mt-2 text-5xl font-semibold tabular-nums tracking-tight">
+              {formatNumber(o.events_today ?? 0)}
+            </p>
+            <p className="mt-2 text-xs text-white/50">
+              {o.devices_online ?? 0} de {o.devices_active ?? 0} equipos en línea
+            </p>
+          </div>
+        }
+      >
+        <Link href="/admin/organizaciones" className={cn(heroButton, "text-navy-950 bg-white")}>
+          <Plus className="size-4" /> Nuevo cliente
+        </Link>
+        <Link href="/admin/pagos" className={cn(heroButton, "glass text-white")}>
+          <Receipt className="size-4" /> Registrar pago
+        </Link>
+      </PageHero>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard
           label="Organizaciones"
           value={formatNumber(o.organizations ?? 0)}
@@ -62,7 +88,7 @@ export default async function AdminOverviewPage() {
         />
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid gap-4 sm:mt-6 sm:gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Suscripciones por estado</CardTitle>
@@ -72,17 +98,21 @@ export default async function AdminOverviewPage() {
               <Link
                 key={s}
                 href={`/admin/suscripciones?estado=${s}`}
-                className="hover:bg-muted rounded-xl border p-3 transition-colors"
+                className="hover:border-navy-300 hover:bg-muted/50 rounded-2xl border p-3 transition-colors"
               >
                 <SubscriptionBadge status={s} />
-                <p className="mt-2 text-2xl font-bold">{o.subscriptions_by_status?.[s] ?? 0}</p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums">
+                  {o.subscriptions_by_status?.[s] ?? 0}
+                </p>
               </Link>
             ))}
-            <div className="rounded-xl border p-3">
+            <div className="rounded-2xl border p-3">
               <span className="text-muted-foreground flex items-center gap-1 text-xs">
                 <Activity className="size-3" /> Eventos 24 h
               </span>
-              <p className="mt-2 text-2xl font-bold">{formatNumber(o.events_today ?? 0)}</p>
+              <p className="mt-2 text-2xl font-semibold tabular-nums">
+                {formatNumber(o.events_today ?? 0)}
+              </p>
             </div>
           </CardContent>
         </Card>
