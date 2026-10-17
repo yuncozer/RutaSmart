@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
   }
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = "RutaSmart";
+  wb.creator = "RutaSmart RU7";
   const ws = wb.addWorksheet("Pasajeros");
   ws.columns = REPORT_HEADERS.map((h) => ({
     header: h.label,

@@ -1,4 +1,4 @@
-# Firmware RutaSmart (ESP32-S3) — Contrato de API
+# Firmware RutaSmart RU7 (ESP32-S3) — Contrato de API
 
 > El firmware se desarrolla en la **Fase 7** (PlatformIO, ESP-IDF o Arduino).
 > Este documento es el contrato que debe cumplir. El simulador (`tools/simulator`) lo implementa
@@ -70,6 +70,36 @@ La inserción es **idempotente** (`ON CONFLICT (id) DO NOTHING`): reenviar un ev
 lo duplica. Con un `200`, el firmware borra de la cola **todos** los eventos del lote
 (aceptados, duplicados y rechazados).
 
+## `POST /api/device/positions` (GPS)
+
+Recorrido del bus. El equipo toma un punto GPS cada `gps_interval_s` segundos (lo indica
+`/config`; por defecto 15 s) mientras tenga _fix_, lo guarda en la microSD con un **UUID propio**
+y lo envía en lotes de hasta **1000 puntos**, igual que los eventos.
+
+```json
+{
+  "positions": [
+    {
+      "id": "3b7e9a52-1c4d-4f6a-9e21-7d0c5b8a4f13",
+      "recorded_at": "2026-10-14T12:15:00Z",
+      "lat": 7.7669,
+      "lng": -72.225,
+      "speed_kmh": 28.5,
+      "heading": 90,
+      "accuracy_m": 4.2,
+      "satellites": 9
+    }
+  ]
+}
+```
+
+- `lat`, `lng` y `recorded_at` son obligatorios; el resto es opcional (salida NMEA del NEO-M8N).
+- `heading`: rumbo en grados (0–359). `accuracy_m`: precisión estimada (HDOP × ~5 m).
+- Puntos en `0,0` se rechazan con `no_fix` (lo que reportan muchos módulos sin señal).
+- Respuesta e idempotencia iguales a `/events`: `{ "accepted", "duplicates", "rejected" }`.
+- El punto más reciente del lote se guarda como la **última ubicación** del bus (mapa en vivo).
+- Los eventos de conteo también deben llevar `lat`/`lng` del último _fix_ para ubicar cada subida.
+
 ## `POST /api/device/heartbeat`
 
 ```json
@@ -94,6 +124,7 @@ Respuesta: `{ "ok": true, "server_time": "2026-10-14T12:20:00.000Z" }` (útil pa
   "assigned": true,
   "server_time": "2026-10-14T12:20:00Z",
   "sync_interval_s": 300,
+  "gps_interval_s": 15,
   "driver_exclusion_enabled": false,
   "firmware": {
     "update_available": true,
@@ -113,5 +144,7 @@ Respuesta: `{ "ok": true, "server_time": "2026-10-14T12:20:00.000Z" }` (útil pa
 
 1. Al encender: conectar WiFi (portal cautivo "RutaSmart-XXXX" si no hay credenciales), `GET /config`.
 2. Cada conteo: guardar el evento con UUID y hora en la microSD.
-3. Cada `sync_interval_s`: enviar la cola en lotes de 500 → borrar lo confirmado → heartbeat.
-4. Cada hora: `GET /config` → aplicar OTA si hay versión nueva.
+3. Cada `gps_interval_s`: guardar un punto GPS en la cola (si hay _fix_).
+4. Cada `sync_interval_s`: enviar eventos (lotes de 500) y posiciones (lotes de 1000) → borrar lo
+   confirmado → heartbeat.
+5. Cada hora: `GET /config` → aplicar OTA si hay versión nueva.

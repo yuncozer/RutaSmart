@@ -10,6 +10,17 @@ export interface SimEvent {
   lng: number;
 }
 
+export interface SimPosition {
+  id: string;
+  recorded_at: string;
+  lat: number;
+  lng: number;
+  speed_kmh: number;
+  heading: number;
+  accuracy_m: number;
+  satellites: number;
+}
+
 export interface DayOptions {
   /** Fecha local YYYY-MM-DD */
   date: string;
@@ -20,6 +31,8 @@ export interface DayOptions {
   /** Ruta: origen y destino (lat, lng) */
   route?: { from: [number, number]; to: [number, number] };
   capacity?: number;
+  /** Segundos entre puntos GPS mientras el bus se mueve (por defecto 30) */
+  gpsIntervalS?: number;
 }
 
 const DEFAULT_ROUTE: DayOptions["route"] = { from: [7.7669, -72.225], to: [7.8146, -72.2002] };
@@ -34,16 +47,24 @@ export function demandFactor(hour: number) {
   return 0.15;
 }
 
+/** Paradas fijas por ruta: así las subidas se agrupan en lugares reales. */
+const STOPS_PER_TRIP = 14;
+
 /**
- * Simula un día de operación de un bus: viajes ida/vuelta de ~50–70 min,
- * paradas cada 2–5 minutos, subidas según demanda horaria y bajadas coherentes
- * (nunca bajan más pasajeros de los que van a bordo; al final del viaje bajan todos).
- * Incluye algunos cruces del conductor (is_driver = true).
+ * Simula un día de operación de un bus: viajes ida/vuelta con 14 paradas,
+ * subidas según demanda horaria y bajadas coherentes (nunca bajan más pasajeros
+ * de los que van a bordo; al final del viaje bajan todos), cruces del conductor
+ * y el recorrido GPS (un punto cada `gpsIntervalS` segundos en movimiento).
  */
-export function simulateDay(rng: Rng, opts: DayOptions): SimEvent[] {
+export function simulateDayFull(
+  rng: Rng,
+  opts: DayOptions,
+): { events: SimEvent[]; positions: SimPosition[] } {
   const route = opts.route ?? DEFAULT_ROUTE!;
   const capacity = opts.capacity ?? 40;
+  const gpsStep = (opts.gpsIntervalS ?? 30) * 1000;
   const events: SimEvent[] = [];
+  const positions: SimPosition[] = [];
   const [y, m, d] = opts.date.split("-").map(Number);
   // medianoche local expresada en UTC
   const midnightUtc = Date.UTC(y, m - 1, d) - opts.utcOffsetHours * 3600_000;
@@ -53,19 +74,47 @@ export function simulateDay(rng: Rng, opts: DayOptions): SimEvent[] {
   let t = midnightUtc + (5 * 60 + 30 + rng.int(0, 15)) * 60_000; // salida ~5:30 am
   const endOfService = midnightUtc + 21 * 3600_000;
   let outbound = true;
+  const inRange = (time: number) => !opts.until || time <= opts.until.getTime();
+
+  /** Punto de la ruta en la fracción f del viaje actual (con una curva suave). */
+  const pointAt = (f: number): [number, number] => {
+    const g = outbound ? f : 1 - f;
+    const [fromLat, fromLng] = route.from;
+    const [toLat, toLng] = route.to;
+    return [
+      fromLat + (toLat - fromLat) * g + Math.sin(Math.PI * g) * 0.004,
+      fromLng + (toLng - fromLng) * g - Math.sin(Math.PI * g) * 0.003,
+    ];
+  };
 
   const push = (time: number, direction: "in" | "out", progress: number, isDriver = false) => {
-    if (opts.until && time > opts.until.getTime()) return;
-    const [fromLat, fromLng] = outbound ? route.from : route.to;
-    const [toLat, toLng] = outbound ? route.to : route.from;
+    if (!inRange(time)) return;
+    const [lat, lng] = pointAt(progress);
     events.push({
       id: rng.uuid(),
       occurred_at: new Date(time).toISOString(),
       direction,
       is_driver: isDriver,
       confidence: Math.round((0.8 + rng.next() * 0.19) * 100) / 100,
-      lat: round6(fromLat + (toLat - fromLat) * progress + (rng.next() - 0.5) * 0.001),
-      lng: round6(fromLng + (toLng - fromLng) * progress + (rng.next() - 0.5) * 0.001),
+      lat: round6(lat + (rng.next() - 0.5) * 0.0004),
+      lng: round6(lng + (rng.next() - 0.5) * 0.0004),
+    });
+  };
+
+  const fix = (time: number, progress: number, speed: number, nextProgress = progress) => {
+    if (!inRange(time)) return;
+    const [lat, lng] = pointAt(progress);
+    const [nLat, nLng] = pointAt(nextProgress);
+    const heading = Math.round(((Math.atan2(nLng - lng, nLat - lat) * 180) / Math.PI + 360) % 360);
+    positions.push({
+      id: rng.uuid(),
+      recorded_at: new Date(time).toISOString(),
+      lat: round6(lat + (rng.next() - 0.5) * 0.0001),
+      lng: round6(lng + (rng.next() - 0.5) * 0.0001),
+      speed_kmh: Math.round(speed * 10) / 10,
+      heading: heading % 360,
+      accuracy_m: Math.round((3 + rng.next() * 5) * 10) / 10,
+      satellites: rng.int(7, 13),
     });
   };
 
@@ -73,12 +122,13 @@ export function simulateDay(rng: Rng, opts: DayOptions): SimEvent[] {
     // El conductor sube al inicio de algunos viajes (cruce que debe excluirse)
     if (rng.chance(0.25)) push(t - 60_000, "in", 0, true);
 
-    const stops = rng.int(12, 20);
     let onboard = 0;
-    for (let s = 0; s < stops; s++) {
-      const progress = s / (stops - 1);
+    for (let s = 0; s < STOPS_PER_TRIP; s++) {
+      const progress = s / (STOPS_PER_TRIP - 1);
       const hour = new Date(t + opts.utcOffsetHours * 3600_000).getUTCHours();
-      const isLast = s === stops - 1;
+      const isLast = s === STOPS_PER_TRIP - 1;
+
+      fix(t, progress, 0); // detenido en la parada
 
       // Bajadas primero: una fracción de los que van a bordo (todos en la última parada)
       const alight = isLast ? onboard : Math.min(onboard, rng.poisson(onboard * 0.18));
@@ -93,7 +143,19 @@ export function simulateDay(rng: Rng, opts: DayOptions): SimEvent[] {
         for (let i = 0; i < board; i++) push((cursor += rng.int(1, 3) * 1000), "in", progress);
         onboard += board;
       }
-      t = Math.max(t + rng.int(2, 5) * 60_000, cursor + 60_000);
+
+      const depart = cursor + 20_000;
+      const arrive = Math.max(t + rng.int(2, 5) * 60_000, cursor + 60_000);
+      if (!isLast) {
+        // Recorrido entre esta parada y la siguiente
+        const next = (s + 1) / (STOPS_PER_TRIP - 1);
+        const speed = 18 + rng.next() * 22;
+        for (let ts = depart; ts < arrive; ts += gpsStep) {
+          const f = progress + ((next - progress) * (ts - depart)) / Math.max(1, arrive - depart);
+          fix(ts, f, speed * (0.8 + rng.next() * 0.4), next);
+        }
+      }
+      t = arrive;
     }
 
     if (rng.chance(0.25)) push(t + 30_000, "out", 1, true);
@@ -101,7 +163,15 @@ export function simulateDay(rng: Rng, opts: DayOptions): SimEvent[] {
     t += rng.int(5, 15) * 60_000; // descanso en terminal
   }
 
-  return events.sort((a, b) => a.occurred_at.localeCompare(b.occurred_at));
+  return {
+    events: events.sort((a, b) => a.occurred_at.localeCompare(b.occurred_at)),
+    positions: positions.sort((a, b) => a.recorded_at.localeCompare(b.recorded_at)),
+  };
+}
+
+/** Solo los eventos de conteo de un día simulado. */
+export function simulateDay(rng: Rng, opts: DayOptions): SimEvent[] {
+  return simulateDayFull(rng, opts).events;
 }
 
 function round6(n: number) {

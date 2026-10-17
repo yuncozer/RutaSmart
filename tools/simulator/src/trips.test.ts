@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "./rng.js";
-import { simulateDay } from "./trips.js";
+import { simulateDay, simulateDayFull } from "./trips.js";
 
 describe("simulateDay", () => {
   const events = simulateDay(createRng(1), { date: "2026-10-13", utcOffsetHours: -4 });
@@ -36,5 +36,29 @@ describe("simulateDay", () => {
     const until = new Date("2026-10-13T14:00:00Z");
     const partial = simulateDay(createRng(1), { date: "2026-10-13", utcOffsetHours: -4, until });
     expect(partial.every((e) => new Date(e.occurred_at) <= until)).toBe(true);
+  });
+});
+
+describe("recorrido GPS simulado", () => {
+  const { events, positions } = simulateDayFull(createRng(7), {
+    date: "2026-10-13",
+    utcOffsetHours: -4,
+  });
+
+  it("genera puntos GPS ordenados durante el servicio", () => {
+    expect(positions.length).toBeGreaterThan(500);
+    for (let i = 1; i < positions.length; i++) {
+      expect(positions[i].recorded_at >= positions[i - 1].recorded_at).toBe(true);
+    }
+  });
+
+  it("las subidas ocurren en paradas del recorrido (cerca de algún punto GPS)", () => {
+    const ins = events.filter((e) => e.direction === "in" && !e.is_driver).slice(0, 50);
+    for (const e of ins) {
+      const near = positions.some(
+        (p) => Math.abs(p.lat - e.lat) < 0.001 && Math.abs(p.lng - e.lng) < 0.001,
+      );
+      expect(near).toBe(true);
+    }
   });
 });

@@ -26,6 +26,20 @@ export interface CountEventRow {
   lng: number | null;
 }
 
+export interface PositionRow {
+  id: string;
+  device_id: string;
+  bus_id: string;
+  organization_id: string;
+  recorded_at: string;
+  lat: number;
+  lng: number;
+  speed_kmh: number | null;
+  heading: number | null;
+  accuracy_m: number | null;
+  satellites: number | null;
+}
+
 export interface FirmwareRelease {
   version: string;
   model_version: string | null;
@@ -42,6 +56,10 @@ export interface DeviceRepo {
   findBySerial(serial: string): Promise<DeviceRecord | null>;
   /** Inserta con ON CONFLICT (id) DO NOTHING y devuelve cuántas filas se insertaron. */
   insertEvents(rows: CountEventRow[]): Promise<number>;
+  /** Inserta posiciones GPS (ON CONFLICT DO NOTHING) y devuelve cuántas se insertaron. */
+  insertPositions(rows: PositionRow[]): Promise<number>;
+  /** Actualiza la última posición conocida del dispositivo. */
+  updateLastPosition(deviceId: string, lat: number, lng: number, at: Date): Promise<void>;
   recordHeartbeat(device: DeviceRecord, hb: HeartbeatInput, at: Date): Promise<void>;
   touch(deviceId: string, at: Date): Promise<void>;
   isDriverExclusionEnabled(organizationId: string | null): Promise<boolean>;

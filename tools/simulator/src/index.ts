@@ -13,7 +13,7 @@ import {
   type EventsResponse,
 } from "./client.js";
 import { createRng } from "./rng.js";
-import { simulateDay, type SimEvent } from "./trips.js";
+import { simulateDayFull, type SimEvent, type SimPosition } from "./trips.js";
 
 const HELP = `
 Simulador de dispositivo RutaSmart
@@ -90,6 +90,28 @@ async function sendInBatches(creds: DeviceCredentials, events: SimEvent[]) {
   return totals;
 }
 
+/** Rutas de ejemplo (Táchira y Cúcuta); cada dispositivo usa una distinta. */
+const ROUTES: { from: [number, number]; to: [number, number] }[] = [
+  { from: [7.7669, -72.225], to: [7.8189, -72.2246] }, // San Cristóbal – Táriba
+  { from: [7.7669, -72.225], to: [7.7013, -72.3586] }, // San Cristóbal – Rubio
+  { from: [7.8891, -72.4967], to: [7.8869, -72.537] }, // Cúcuta Centro – Atalaya
+  { from: [7.7563, -72.2276], to: [7.7745, -72.212] }, // Terminal – Barrio Obrero
+  { from: [7.8337, -72.472], to: [7.8939, -72.5078] }, // Villa del Rosario – Cúcuta
+];
+
+async function sendPositions(creds: DeviceCredentials, positions: SimPosition[]) {
+  const totals = { accepted: 0, duplicates: 0, rejected: 0 };
+  for (let i = 0; i < positions.length; i += 1000) {
+    const res = await request<EventsResponse>(creds, "POST", "positions", {
+      positions: positions.slice(i, i + 1000),
+    });
+    totals.accepted += res.accepted;
+    totals.duplicates += res.duplicates;
+    totals.rejected += res.rejected.length;
+  }
+  return totals;
+}
+
 async function runDevice(creds: DeviceCredentials, index: number) {
   const tag = `[${creds.serial}]`;
   const rng = createRng(seed + index * 7919);
@@ -114,13 +136,26 @@ async function runDevice(creds: DeviceCredentials, index: number) {
 
   // 2) Generar los días
   const all: SimEvent[] = [];
+  const track: SimPosition[] = [];
+  // Cada serial usa siempre la misma ruta (RS-000001 → ruta 1, …)
+  const serialNumber = Number(creds.serial.replace(/\D/g, "")) || index + 1;
+  const route = ROUTES[(serialNumber - 1) % ROUTES.length];
+  const gpsIntervalS = Math.max(15, config?.gps_interval_s ?? 30);
   for (let d = days - 1; d >= 0; d--) {
     const date = localDate(d);
-    const dayEvents = simulateDay(rng, { date, utcOffsetHours: utcOffset, until: now });
+    const day = simulateDayFull(rng, {
+      date,
+      utcOffsetHours: utcOffset,
+      until: now,
+      route,
+      gpsIntervalS,
+    });
+    const dayEvents = day.events;
+    track.push(...day.positions);
     const ins = dayEvents.filter((e) => e.direction === "in" && !e.is_driver).length;
     const driver = dayEvents.filter((e) => e.is_driver).length;
     console.log(
-      `${tag} ${date}: ${dayEvents.length} eventos (${ins} subidas, ${driver} cruces del conductor)`,
+      `${tag} ${date}: ${dayEvents.length} eventos (${ins} subidas, ${driver} cruces del conductor), ${day.positions.length} puntos GPS`,
     );
     all.push(...dayEvents);
   }
@@ -147,21 +182,27 @@ async function runDevice(creds: DeviceCredentials, index: number) {
     );
   }
 
-  // 4) Heartbeat
+  // 4) Recorrido GPS
+  const gps = await sendPositions(creds, track);
+  console.log(
+    `${tag} 🛰️  GPS → aceptados ${gps.accepted}, duplicados ${gps.duplicates}, rechazados ${gps.rejected}`,
+  );
+
+  // 5) Heartbeat
   await request(creds, "POST", "heartbeat", {
     battery: rng.int(55, 100),
     rssi: -rng.int(50, 85),
     free_storage_mb: rng.int(9000, 14000),
     firmware_version: "0.1.0",
     model_version: "m-0.1",
-    lat: all.at(-1)?.lat ?? null,
-    lng: all.at(-1)?.lng ?? null,
+    lat: track.at(-1)?.lat ?? all.at(-1)?.lat ?? null,
+    lng: track.at(-1)?.lng ?? all.at(-1)?.lng ?? null,
   });
   console.log(`${tag} 💓 heartbeat enviado`);
 }
 
 console.log(
-  `RutaSmart · simulador → ${devices[0].apiUrl} · ${devices.length} dispositivo(s) · ${days} día(s) · semilla ${seed}`,
+  `RutaSmart RU7 · simulador → ${devices[0].apiUrl} · ${devices.length} dispositivo(s) · ${days} día(s) · semilla ${seed}`,
 );
 let failed = false;
 for (const [i, creds] of devices.entries()) {

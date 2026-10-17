@@ -12,7 +12,8 @@ export default function NoAccessPage() {
         </CardHeader>
         <CardContent className="text-muted-foreground space-y-4 text-sm">
           <p>
-            Pide al dueño de la empresa o a soporte de RutaSmart que te agregue a una organización.
+            Pide al dueño de la empresa o a soporte de RutaSmart RU7 que te agregue a una
+            organización.
           </p>
           <form action="/auth/salir" method="post">
             <Button variant="outline" className="w-full">

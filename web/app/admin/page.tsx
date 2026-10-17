@@ -40,7 +40,7 @@ export default async function AdminOverviewPage() {
 
   return (
     <>
-      <PageHeader title="Resumen" description="Estado general de RutaSmart." />
+      <PageHeader title="Resumen" description="Estado general de RutaSmart RU7." />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           label="Organizaciones"

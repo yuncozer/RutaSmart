@@ -19,6 +19,9 @@ import { Table, TBody, TD, TH, THead } from "@/components/ui/table";
 import { CountsChart } from "@/components/charts/counts-chart";
 import { OnlineDot } from "@/components/status-badges";
 import { FeatureLocked } from "@/components/app/subscription-gate";
+import { BusRouteMap } from "@/components/map/bus-route-map";
+import type { DotPoint, Hotspot } from "@/components/map";
+import { averageMovingSpeed, osmLink, routeDistanceKm, type LatLng } from "@/lib/geo";
 import { requireAppContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { addDays, formatDate, formatNumber, localeFor, timeAgo, todayIn } from "@/lib/format";
@@ -54,17 +57,67 @@ export default async function BusDetailPage({
   const hourlyEnabled = hasFeature(f, "hourly_dashboard");
   const from = addDays(date, -13);
 
-  const [{ data: daily }, { data: hourly }, { data: device }] = await Promise.all([
+  const gpsEnabled = hasFeature(f, "gps_tracking");
+  const empty = Promise.resolve({ data: [] as Record<string, unknown>[] });
+  const [
+    { data: daily },
+    { data: hourly },
+    { data: device },
+    { data: routeRows },
+    { data: pointRows },
+    { data: spotRows },
+  ] = await Promise.all([
     supabase.rpc("daily_counts", { p_org_id: ctx.org.id, p_from: from, p_to: date, p_bus_id: id }),
     hourlyEnabled
       ? supabase.rpc("hourly_counts", { p_bus_id: id, p_date: date })
       : Promise.resolve({ data: [] as HourlyCountRow[] }),
     supabase
       .from("devices")
-      .select("id, serial, status, last_seen_at, last_battery, last_rssi, firmware_version")
+      .select(
+        "id, serial, status, last_seen_at, last_battery, last_rssi, firmware_version, last_lat, last_lng",
+      )
       .eq("bus_id", id)
       .maybeSingle<Device>(),
+    gpsEnabled ? supabase.rpc("bus_route", { p_bus_id: id, p_date: date }) : empty,
+    gpsEnabled ? supabase.rpc("boarding_points", { p_bus_id: id, p_date: date }) : empty,
+    gpsEnabled
+      ? supabase.rpc("stop_hotspots", {
+          p_org_id: ctx.org.id,
+          p_from: addDays(date, -6),
+          p_to: date,
+          p_bus_id: id,
+          p_limit: 8,
+        })
+      : empty,
   ]);
+
+  // GPS: recorrido, subidas/bajadas con ubicación y paradas principales
+  const routeData = ((routeRows ?? []) as Record<string, unknown>[]).map((r) => ({
+    lat: Number(r.lat),
+    lng: Number(r.lng),
+    speed: r.speed_kmh == null ? null : Number(r.speed_kmh),
+    at: String(r.recorded_at),
+  }));
+  const route: LatLng[] = routeData.map(({ lat, lng }) => ({ lat, lng }));
+  const dots: DotPoint[] = ((pointRows ?? []) as Record<string, unknown>[]).map((p) => ({
+    lat: Number(p.lat),
+    lng: Number(p.lng),
+    kind: p.direction === "out" ? "out" : "in",
+  }));
+  const hotspots: Hotspot[] = ((spotRows ?? []) as Record<string, unknown>[]).map((h) => ({
+    lat: Number(h.lat),
+    lng: Number(h.lng),
+    ins: Number(h.ins),
+    outs: Number(h.outs),
+    total: Number(h.total),
+  }));
+  const km = routeDistanceKm(route);
+  const avgSpeed = averageMovingSpeed(routeData.map((r) => r.speed));
+  const timeFmt = new Intl.DateTimeFormat(localeFor(country), {
+    timeZone: ctx.org.timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   const rows = normalizeDaily(daily);
   const t = totalsFor(rows, date, id);
@@ -196,13 +249,100 @@ export default async function BusDetailPage({
             ) : (
               <p className="text-muted-foreground">Este bus aún no tiene un equipo instalado.</p>
             )}
-            <div className="bg-muted/60 text-muted-foreground mt-4 flex items-start gap-2 rounded-lg p-3 text-xs">
-              <MapPin className="size-4 shrink-0" /> El mapa de subidas por ubicación (GPS) llegará
-              en una próxima versión.
-            </div>
+            {device?.last_lat != null && device.last_lng != null ? (
+              <div className="bg-muted/60 mt-4 flex items-start gap-2 rounded-lg p-3 text-xs">
+                <MapPin className="text-navy-500 size-4 shrink-0" />
+                <div>
+                  <p>Última ubicación GPS</p>
+                  <div className="mt-1 flex gap-3">
+                    <Link href="/app/mapa" className="text-link hover:underline">
+                      Ver en el mapa en vivo
+                    </Link>
+                    <a
+                      href={osmLink(device.last_lat, device.last_lng)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-link hover:underline"
+                    >
+                      Abrir en OpenStreetMap
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </div>
+
+      <Card id="recorrido" className="mt-4 scroll-mt-20">
+        <CardHeader>
+          <CardTitle>Recorrido y paradas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!gpsEnabled ? (
+            <FeatureLocked feature="gps_tracking" title="Recorrido GPS y paradas" />
+          ) : route.length === 0 && dots.length === 0 ? (
+            <div className="text-muted-foreground flex flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-10 text-center text-sm">
+              <MapPin className="size-6" />
+              No hay datos GPS para este día. Aparecerán cuando el equipo envíe su ubicación.
+            </div>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+              <BusRouteMap route={route} dots={dots} hotspots={hotspots} />
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border p-3">
+                    <p className="text-muted-foreground text-xs">Recorrido</p>
+                    <p className="text-xl font-semibold">{formatNumber(km, country)} km</p>
+                  </div>
+                  <div className="rounded-xl border p-3">
+                    <p className="text-muted-foreground text-xs">Vel. promedio</p>
+                    <p className="text-xl font-semibold">
+                      {avgSpeed != null ? `${avgSpeed} km/h` : "—"}
+                    </p>
+                  </div>
+                  <div className="col-span-2 rounded-xl border p-3">
+                    <p className="text-muted-foreground text-xs">En servicio</p>
+                    <p className="font-semibold">
+                      {routeData.length
+                        ? `${timeFmt.format(new Date(routeData[0].at))} – ${timeFmt.format(new Date(routeData[routeData.length - 1].at))}`
+                        : "—"}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium">Paradas con más movimiento (7 días)</p>
+                  {hotspots.length ? (
+                    <ol className="space-y-1.5 text-sm">
+                      {hotspots.map((h, i) => (
+                        <li key={i} className="flex items-center gap-2">
+                          <span className="bg-accent/20 dark:text-accent grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold text-amber-700">
+                            {i + 1}
+                          </span>
+                          <span className="flex-1">
+                            {formatNumber(h.ins, country)} suben · {formatNumber(h.outs, country)}{" "}
+                            bajan
+                          </span>
+                          <a
+                            href={osmLink(h.lat, h.lng)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-link text-xs hover:underline"
+                          >
+                            Ver
+                          </a>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">Sin datos suficientes.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="mt-4">
         <CardHeader>

@@ -31,6 +31,24 @@ export function createSupabaseDeviceRepo(): DeviceRepo {
       return data?.length ?? 0;
     },
 
+    async insertPositions(rows) {
+      if (!rows.length) return 0;
+      const { data, error } = await db
+        .from("device_positions")
+        .upsert(rows, { onConflict: "id", ignoreDuplicates: true })
+        .select("id");
+      if (error) throw error;
+      return data?.length ?? 0;
+    },
+
+    async updateLastPosition(deviceId, lat, lng, at) {
+      const { error } = await db
+        .from("devices")
+        .update({ last_lat: lat, last_lng: lng, last_seen_at: at.toISOString() })
+        .eq("id", deviceId);
+      if (error) throw error;
+    },
+
     async recordHeartbeat(device, hb, at) {
       const nowIso = at.toISOString();
       const update: Record<string, unknown> = { last_seen_at: nowIso };

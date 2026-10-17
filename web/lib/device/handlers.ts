@@ -1,10 +1,12 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import type { DeviceRecord, DeviceRepo, CountEventRow } from "./repo";
+import type { DeviceRecord, DeviceRepo, CountEventRow, PositionRow } from "./repo";
 import type { RateLimiter } from "./rate-limit";
 import {
   countEventSchema,
   eventsBodySchema,
   heartbeatSchema,
+  positionSchema,
+  positionsBodySchema,
   MAX_EVENT_AGE_MS,
   MAX_FUTURE_SKEW_MS,
   serialSchema,
@@ -18,6 +20,8 @@ export interface HandlerDeps {
 }
 
 export const DEFAULT_SYNC_INTERVAL_S = 300;
+/** Cada cuántos segundos el equipo debe tomar un punto GPS mientras el bus se mueve. */
+export const DEFAULT_GPS_INTERVAL_S = 15;
 
 function json(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
@@ -165,6 +169,84 @@ export async function handleEvents(req: Request, deps: HandlerDeps): Promise<Res
   return json({ accepted, duplicates, rejected });
 }
 
+/** POST /api/device/positions — puntos GPS en lote (máx. 1000), inserción idempotente. */
+export async function handlePositions(req: Request, deps: HandlerDeps): Promise<Response> {
+  const auth = await authenticateDevice(req, deps);
+  if (!auth.ok) return auth.response;
+  const { device } = auth;
+  const now = (deps.now ?? (() => new Date()))();
+
+  if (device.status === "disabled") {
+    return error(403, "device_disabled", "El dispositivo está deshabilitado");
+  }
+  if (!device.bus_id || !device.organization_id || device.status !== "active") {
+    return error(409, "device_not_assigned", "El dispositivo no está asignado a un bus");
+  }
+
+  const body = positionsBodySchema.safeParse(await readJson(req));
+  if (!body.success) {
+    return error(400, "invalid_body", "Se espera { positions: [...] } con 1 a 1000 puntos");
+  }
+
+  const rows = new Map<string, PositionRow>();
+  const rejected: { index: number; id?: string; reason: string }[] = [];
+
+  body.data.positions.forEach((raw, index) => {
+    const parsed = positionSchema.safeParse(raw);
+    const rawId =
+      typeof raw === "object" && raw && "id" in raw
+        ? String((raw as { id: unknown }).id)
+        : undefined;
+    if (!parsed.success) {
+      rejected.push({ index, id: rawId, reason: "invalid_position" });
+      return;
+    }
+    const p = parsed.data;
+    // 0,0 es lo que reportan muchos módulos GPS sin señal ("sin fix")
+    if (p.lat === 0 && p.lng === 0) {
+      rejected.push({ index, id: p.id, reason: "no_fix" });
+      return;
+    }
+    const t = new Date(p.recorded_at).getTime();
+    if (t > now.getTime() + MAX_FUTURE_SKEW_MS) {
+      rejected.push({ index, id: p.id, reason: "recorded_at_in_future" });
+      return;
+    }
+    if (t < now.getTime() - MAX_EVENT_AGE_MS) {
+      rejected.push({ index, id: p.id, reason: "recorded_at_too_old" });
+      return;
+    }
+    const id = p.id.toLowerCase();
+    rows.set(id, {
+      id,
+      device_id: device.id,
+      bus_id: device.bus_id!,
+      organization_id: device.organization_id!,
+      recorded_at: new Date(t).toISOString(),
+      lat: p.lat,
+      lng: p.lng,
+      speed_kmh: p.speed_kmh ?? null,
+      heading: p.heading ?? null,
+      accuracy_m: p.accuracy_m ?? null,
+      satellites: p.satellites ?? null,
+    });
+  });
+
+  const valid = [...rows.values()];
+  const accepted = await deps.repo.insertPositions(valid);
+  const duplicates = body.data.positions.length - rejected.length - accepted;
+
+  // La posición más reciente del lote pasa a ser la "última conocida" del equipo
+  const latest = valid.reduce<PositionRow | null>(
+    (best, r) => (!best || r.recorded_at > best.recorded_at ? r : best),
+    null,
+  );
+  if (latest) await deps.repo.updateLastPosition(device.id, latest.lat, latest.lng, now);
+  else await deps.repo.touch(device.id, now);
+
+  return json({ accepted, duplicates, rejected });
+}
+
 /** POST /api/device/heartbeat — estado del equipo. */
 export async function handleHeartbeat(req: Request, deps: HandlerDeps): Promise<Response> {
   const auth = await authenticateDevice(req, deps);
@@ -217,6 +299,7 @@ export async function handleConfig(req: Request, deps: HandlerDeps): Promise<Res
     assigned: Boolean(device.bus_id) && device.status === "active",
     server_time: now.toISOString(),
     sync_interval_s: DEFAULT_SYNC_INTERVAL_S,
+    gps_interval_s: DEFAULT_GPS_INTERVAL_S,
     driver_exclusion_enabled: driverExclusion,
     firmware,
   });

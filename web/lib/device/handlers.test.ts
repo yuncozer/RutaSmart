@@ -4,11 +4,12 @@ import {
   handleConfig,
   handleEvents,
   handleHeartbeat,
+  handlePositions,
   sha256Hex,
   type HandlerDeps,
 } from "./handlers";
 import { RateLimiter } from "./rate-limit";
-import type { CountEventRow, DeviceRecord, DeviceRepo, FirmwareRelease } from "./repo";
+import type { CountEventRow, DeviceRecord, DeviceRepo, FirmwareRelease, PositionRow } from "./repo";
 import { compareVersions } from "./semver";
 
 const NOW = new Date("2026-10-14T12:20:00Z");
@@ -38,6 +39,21 @@ class MemoryRepo implements DeviceRepo {
   }
   async recordHeartbeat(device: DeviceRecord, hb: unknown) {
     this.heartbeats.push({ device: device.serial, hb });
+  }
+  positions = new Map<string, PositionRow>();
+  lastPosition: { lat: number; lng: number } | null = null;
+  async insertPositions(rows: PositionRow[]) {
+    let n = 0;
+    for (const r of rows) {
+      if (!this.positions.has(r.id)) {
+        this.positions.set(r.id, r);
+        n++;
+      }
+    }
+    return n;
+  }
+  async updateLastPosition(_id: string, lat: number, lng: number) {
+    this.lastPosition = { lat, lng };
   }
   async touch(id: string) {
     this.touched.push(id);
@@ -265,6 +281,7 @@ describe("GET /api/device/config", () => {
       assigned: true,
       server_time: NOW.toISOString(),
       sync_interval_s: 300,
+      gps_interval_s: 15,
       driver_exclusion_enabled: false,
       firmware: { update_available: false },
     });
@@ -312,5 +329,77 @@ describe("compareVersions", () => {
     expect(compareVersions("0.10.0", "0.9.0")).toBe(1);
     expect(compareVersions("1.0.0", "1.0")).toBe(0);
     expect(compareVersions("v0.1.0", "0.1.1")).toBe(-1);
+  });
+});
+
+describe("POST /api/device/positions", () => {
+  function position(overrides: Record<string, unknown> = {}) {
+    return {
+      id: randomUUID(),
+      recorded_at: "2026-10-14T12:15:00Z",
+      lat: 7.7669,
+      lng: -72.225,
+      speed_kmh: 28.5,
+      heading: 90,
+      accuracy_m: 4.2,
+      satellites: 9,
+      ...overrides,
+    };
+  }
+
+  it("inserta posiciones y actualiza la última ubicación con la más reciente", async () => {
+    const res = await handlePositions(
+      req("positions", {
+        positions: [
+          position({ recorded_at: "2026-10-14T12:10:00Z", lat: 7.1 }),
+          position({ recorded_at: "2026-10-14T12:15:00Z", lat: 7.2 }),
+        ],
+      }),
+      deps,
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ accepted: 2, duplicates: 0, rejected: [] });
+    expect(repo.lastPosition).toEqual({ lat: 7.2, lng: -72.225 });
+    expect([...repo.positions.values()].every((p) => p.bus_id === "bus-1")).toBe(true);
+  });
+
+  it("es idempotente", async () => {
+    const batch = { positions: [position(), position()] };
+    await handlePositions(req("positions", batch), deps);
+    const body = await (await handlePositions(req("positions", batch), deps)).json();
+    expect(body).toMatchObject({ accepted: 0, duplicates: 2 });
+  });
+
+  it("rechaza puntos sin señal (0,0) y fuera de rango", async () => {
+    const body = await (
+      await handlePositions(
+        req("positions", {
+          positions: [position(), position({ lat: 0, lng: 0 }), position({ lat: 95 })],
+        }),
+        deps,
+      )
+    ).json();
+    expect(body.accepted).toBe(1);
+    expect(body.rejected.map((r: { reason: string }) => r.reason)).toEqual([
+      "no_fix",
+      "invalid_position",
+    ]);
+  });
+
+  it("dispositivo sin bus asignado → 409", async () => {
+    repo.devices.set(
+      "RS-000001",
+      device({ status: "inventory", bus_id: null, organization_id: null }),
+    );
+    const res = await handlePositions(req("positions", { positions: [position()] }), deps);
+    expect(res.status).toBe(409);
+  });
+
+  it("requiere autenticación", async () => {
+    const res = await handlePositions(
+      req("positions", { positions: [position()] }, { secret: "x" }),
+      deps,
+    );
+    expect(res.status).toBe(401);
   });
 });

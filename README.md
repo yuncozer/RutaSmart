@@ -1,4 +1,4 @@
-# RutaSmart
+# RutaSmart RU7
 
 Sistema para **contar automáticamente los pasajeros que suben y bajan de un autobús**
 (Venezuela y Colombia). Un equipo ESP32-S3 con cámara cuenta localmente y envía solo eventos de
@@ -42,7 +42,7 @@ pnpm dev                 # http://localhost:3000
 
 # 4. Simular equipos enviando conteos (en otra terminal)
 pnpm simulate -- --serial RS-000001 --secret dev-secret-1 --days 1
-pnpm simulate -- --buses 4 --days 2 --offline   # prueba la cola sin conexión e idempotencia
+pnpm simulate -- --buses 4 --days 2 --offline   # cola sin conexión, idempotencia y recorrido GPS
 ```
 
 Para reiniciar la base con datos limpios: `pnpm db:reset`.
@@ -76,7 +76,10 @@ Dispositivos: `RS-000001` … `RS-000006` con secretos `dev-secret-1` … `dev-s
 
 ## Funcionalidades del MVP
 
-- **API de dispositivos** (`/api/device/events|heartbeat|config`): autenticación por serial +
+- **GPS** (`/api/device/positions`): recorrido del bus, **mapa en vivo** de la flota
+  (`/app/mapa`, se actualiza cada 30 s), recorrido del día por bus con kilómetros y velocidad
+  promedio, ubicación de cada subida/bajada y **paradas con más movimiento**.
+- **API de dispositivos** (`/api/device/events|positions|heartbeat|config`): autenticación por serial +
   secreto (sha256), lotes de 500 eventos con inserción idempotente, rate limiting, OTA con signed
   URLs. Contrato completo en [`firmware/README.md`](firmware/README.md).
 - **Panel admin** (`/admin`): resumen e ingreso mensual estimado, organizaciones y sus usuarios,

@@ -1,4 +1,4 @@
-import { BatteryMedium, Cpu, Signal } from "lucide-react";
+import { BatteryMedium, Cpu, MapPin, Signal } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Select } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { RegisterDeviceForm, RotateSecretButton } from "@/components/admin/devic
 import { DeviceStatusBadge, MODALITY_LABELS, OnlineDot } from "@/components/status-badges";
 import { createClient } from "@/lib/supabase/server";
 import { timeAgo } from "@/lib/format";
+import { osmLink } from "@/lib/geo";
 import type { Device } from "@/lib/types";
 import { assignDevice, registerDevice, rotateDeviceSecret, setDeviceStatus } from "../actions";
 
@@ -113,9 +114,23 @@ export default async function DevicesPage({
                     modelo {d.model_version ?? "—"}
                   </div>
                 </div>
-                <p className="text-muted-foreground text-xs">
-                  Modalidad: {d.modality ? MODALITY_LABELS[d.modality] : "sin definir"}
-                </p>
+                <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span>Modalidad: {d.modality ? MODALITY_LABELS[d.modality] : "sin definir"}</span>
+                  {d.last_lat != null && d.last_lng != null ? (
+                    <a
+                      href={osmLink(d.last_lat, d.last_lng)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-link flex items-center gap-1 hover:underline"
+                    >
+                      <MapPin className="size-3" /> {d.last_lat.toFixed(5)}, {d.last_lng.toFixed(5)}
+                    </a>
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="size-3" /> Sin ubicación GPS
+                    </span>
+                  )}
+                </div>
 
                 {d.status !== "retired" ? (
                   <ActionForm

@@ -12,6 +12,7 @@ import {
   Home,
   Layers,
   LayoutDashboard,
+  MapPin,
   Building2,
   Receipt,
   Users,
@@ -42,6 +43,7 @@ const NAVS: Record<"admin" | "app", NavItem[]> = {
   ],
   app: [
     { key: "home", href: "/app", label: "Inicio", icon: Home, exact: true },
+    { key: "map", href: "/app/mapa", label: "Mapa", icon: MapPin },
     { key: "reports", href: "/app/reportes", label: "Reportes", icon: FileDown },
     { key: "fleet", href: "/app/flota", label: "Flota", icon: BarChart3 },
     { key: "users", href: "/app/usuarios", label: "Usuarios", icon: Users },

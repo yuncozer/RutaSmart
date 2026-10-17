@@ -95,6 +95,31 @@ select pg_temp.check(
   pg_temp.err($q$select * from public.daily_counts('20000000-0000-4000-a000-000000000002', current_date - 1, current_date)$q$) like '42501%',
   'owner no puede consultar el dashboard de otra organización');
 
+-- GPS
+select pg_temp.check(
+  (select count(*) from public.fleet_positions('20000000-0000-4000-a000-000000000001') where lat is not null) = 2,
+  'fleet_positions devuelve la posición de los 2 buses del owner');
+select pg_temp.check(
+  (select count(*) from public.bus_route('40000000-0000-4000-a000-000000000001', current_date - 1)) > 100,
+  'bus_route devuelve el recorrido del día');
+select pg_temp.check(
+  (select count(*) from public.boarding_points('40000000-0000-4000-a000-000000000001', current_date - 1)) > 50,
+  'boarding_points devuelve subidas y bajadas con ubicación');
+select pg_temp.check(
+  (select count(*) from public.stop_hotspots('20000000-0000-4000-a000-000000000001', current_date - 7, current_date)) between 5 and 25,
+  'stop_hotspots agrupa las paradas con más movimiento');
+select pg_temp.check(
+  (select count(*) from public.device_positions where organization_id <> '20000000-0000-4000-a000-000000000001') = 0,
+  'owner no ve posiciones GPS de otras organizaciones');
+select pg_temp.check(
+  pg_temp.err($q$insert into public.device_positions (id, device_id, bus_id, organization_id, recorded_at, lat, lng)
+    values (gen_random_uuid(), '50000000-0000-4000-a000-000000000001', '40000000-0000-4000-a000-000000000001',
+            '20000000-0000-4000-a000-000000000001', now(), 7.7, -72.2)$q$) like '42501%',
+  'owner no puede insertar posiciones GPS');
+select pg_temp.check(
+  pg_temp.err($q$select * from public.fleet_positions('20000000-0000-4000-a000-000000000002')$q$) like '42501%',
+  'owner no puede ver el mapa de otra organización');
+
 -- Límite de buses (la suscripción cubre 3)
 select pg_temp.check(
   pg_temp.err($q$insert into public.buses (organization_id, plate) values ('20000000-0000-4000-a000-000000000001', 'NEW-001')$q$) = '',
@@ -120,6 +145,16 @@ select pg_temp.check(
   pg_temp.err($q$select * from public.hourly_counts('40000000-0000-4000-a000-000000000002', current_date)$q$) like '42501%',
   'conductor no puede ver la hora a hora de otro bus');
 
+select pg_temp.check(
+  (select count(*) from public.fleet_positions('20000000-0000-4000-a000-000000000001')) = 1,
+  'en el mapa en vivo el conductor ve solo su bus');
+select pg_temp.check(
+  pg_temp.err($q$select * from public.bus_route('40000000-0000-4000-a000-000000000002', current_date)$q$) like '42501%',
+  'conductor no puede ver el recorrido de otro bus');
+select pg_temp.check(
+  (select count(distinct bus_id) from public.device_positions) = 1,
+  'conductor ve posiciones GPS solo de su bus');
+
 -- ---------- owner con suscripción en gracia ----------
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-a000-000000000005', true);
 select pg_temp.check(public.get_subscription_status('20000000-0000-4000-a000-000000000003') = 'grace', 'estado grace');
@@ -137,6 +172,10 @@ select pg_temp.check(public.get_subscription_status('20000000-0000-4000-a000-000
 select pg_temp.check(
   pg_temp.err($q$select * from public.daily_counts('20000000-0000-4000-a000-000000000004', current_date - 1, current_date)$q$) like 'P0001:subscription_expired%',
   'con suscripción vencida el dashboard devuelve error controlado');
+
+select pg_temp.check(
+  pg_temp.err($q$select * from public.fleet_positions('20000000-0000-4000-a000-000000000004')$q$) like 'P0001:subscription_expired%',
+  'con suscripción vencida el mapa devuelve error controlado');
 
 -- ---------- tareas de servidor ----------
 select pg_temp.check(

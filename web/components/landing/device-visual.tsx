@@ -1,4 +1,4 @@
-/** Render del equipo RutaSmart (ESP32-S3 + cámara + IR). SVG puro. */
+/** Render del equipo RutaSmart RU7 (ESP32-S3 + cámara + IR). SVG puro. */
 export function DeviceVisual() {
   return (
     <div className="relative mx-auto w-full max-w-md" aria-hidden="true">
@@ -62,7 +62,7 @@ export function DeviceVisual() {
           fontFamily="var(--font-geist-sans)"
           fontWeight="600"
         >
-          RutaSmart
+          RutaSmart RU7
         </text>
         {/* Soporte */}
         <rect x="150" y="30" width="60" height="24" rx="6" fill="#94a3b8" />

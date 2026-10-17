@@ -64,7 +64,7 @@ const features = [
   {
     icon: LayoutDashboard,
     title: "Tu flota en el teléfono",
-    text: "Pasajeros de hoy, comparación con ayer y con la semana pasada, y hora pico por bus.",
+    text: "Pasajeros de hoy, mapa en vivo con la ubicación GPS de cada bus, recorrido del día y las paradas donde más gente sube.",
     className: "md:col-span-2",
   },
   {
@@ -100,7 +100,7 @@ const hardware = [
   { icon: Cpu, title: "IA en el borde", text: "ESP32-S3 con cámara OV5640" },
   { icon: Moon, title: "Visión nocturna", text: "Iluminación infrarroja 850 nm" },
   { icon: Gauge, title: "Doble sensor", text: "Láser de distancia para mayor precisión" },
-  { icon: MapPin, title: "GPS integrado", text: "Cada subida queda ubicada en la ruta" },
+  { icon: MapPin, title: "GPS integrado", text: "Mapa en vivo y cada subida ubicada en la ruta" },
   { icon: CloudOff, title: "Memoria local", text: "microSD: no se pierde ningún conteo" },
   { icon: Wifi, title: "Actualizable", text: "Mejoras del modelo por aire (OTA)" },
 ];
@@ -143,7 +143,7 @@ const faqs = [
 export default async function LandingPage() {
   const plans = await getPublicPlans();
   const waLink = WHATSAPP
-    ? `https://wa.me/${WHATSAPP}?text=${encodeURIComponent("Hola, quiero información sobre RutaSmart")}`
+    ? `https://wa.me/${WHATSAPP}?text=${encodeURIComponent("Hola, quiero información sobre RutaSmart RU7")}`
     : "#contacto";
 
   return (
@@ -151,7 +151,7 @@ export default async function LandingPage() {
       {/* ------------------------------------------------------------ Navegación */}
       <header className="fixed inset-x-0 top-0 z-40 px-3 pt-3">
         <nav className="glass mx-auto flex h-14 max-w-6xl items-center justify-between rounded-2xl px-3 pl-4">
-          <Link href="/" aria-label="RutaSmart">
+          <Link href="/" aria-label="RutaSmart RU7">
             <Logo light />
           </Link>
           <div className="hidden items-center gap-7 text-sm text-white/70 md:flex">
@@ -224,9 +224,9 @@ export default async function LandingPage() {
               contado.
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/65">
-              RutaSmart instala inteligencia artificial sobre la puerta de tus buses y te muestra,
-              en tiempo real, cuántas personas suben y bajan en cada unidad. Sin planillas y sin
-              adivinar.
+              RutaSmart RU7 instala inteligencia artificial sobre la puerta de tus buses y te
+              muestra, en tiempo real, cuántas personas suben y bajan en cada unidad. Sin planillas
+              y sin adivinar.
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-3">
               <a
@@ -347,7 +347,7 @@ export default async function LandingPage() {
             </p>
             <p className="mt-4 text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
               Lluvia, noche, huecos y zonas sin señal.{" "}
-              <span className="text-white/50">RutaSmart sigue contando.</span>
+              <span className="text-white/50">RU7 sigue contando.</span>
             </p>
             <div className="mt-8 flex flex-wrap gap-2 text-sm">
               {["Visión infrarroja", "Cola local sin conexión", "Batería de respaldo"].map((t) => (
@@ -531,7 +531,7 @@ export default async function LandingPage() {
           <Logo light />
           <div className="flex flex-col items-center gap-1 sm:items-end">
             <p className="flex items-center gap-2">
-              <ShieldCheck className="size-4" /> Sin imágenes, solo conteos · RutaSmart ©{" "}
+              <ShieldCheck className="size-4" /> Sin imágenes, solo conteos · RutaSmart RU7 ©{" "}
               {new Date().getFullYear()}
             </p>
             <p className="text-xs text-white/30">

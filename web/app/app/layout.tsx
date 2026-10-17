@@ -5,13 +5,15 @@ import { SubscriptionBanner, SubscriptionBlocked } from "@/components/app/subscr
 import { requireAppContext } from "@/lib/auth";
 import { hasDashboardAccess } from "@/lib/subscription";
 
-export const metadata: Metadata = { title: { default: "Panel", template: "%s · RutaSmart" } };
+export const metadata: Metadata = { title: { default: "Panel", template: "%s · RutaSmart RU7" } };
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
   const ctx = await requireAppContext();
   const allowed = hasDashboardAccess(ctx.access.status);
   const navKeys =
-    ctx.role === "owner" ? ["home", "reports", "fleet", "users", "subscription"] : ["home"];
+    ctx.role === "owner"
+      ? ["home", "map", "reports", "fleet", "users", "subscription"]
+      : ["home", "map"];
 
   return (
     <AppShell

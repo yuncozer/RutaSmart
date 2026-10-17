@@ -40,6 +40,7 @@
    | `NEXT_PUBLIC_WHATSAPP_NUMBER`   | número de soporte sin `+` (ej. `584141234567`)  |
    | `CRON_SECRET`                   | cadena aleatoria larga (`openssl rand -hex 32`) |
    | `DEVICE_RATE_LIMIT_PER_MIN`     | `60`                                            |
+   | `NEXT_PUBLIC_MAP_TILE_URL`      | (opcional) mapas base con API key, ver abajo    |
 
 4. El cron diario está en `web/vercel.json` (`/api/cron/daily` a las 09:00 UTC ≈ 5:00 am en
    Caracas). Vercel envía `Authorization: Bearer $CRON_SECRET` automáticamente.
@@ -57,9 +58,18 @@
 
 5. Ingresa como el dueño y verifica los conteos en `/app`.
 
-## 4. Pendientes / mejoras conocidas
+## 4. Mapas
+
+Por defecto se usan los mapas de OpenStreetMap (sin API key, con atribución). Su política de uso
+no admite tráfico comercial alto: cuando haya muchos clientes, crea una cuenta en MapTiler o
+Stadia Maps y define, por ejemplo:
+
+```
+NEXT_PUBLIC_MAP_TILE_URL=https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=<tu-key>
+```
+
+## 5. Pendientes / mejoras conocidas
 
 - El rate limiting es en memoria por instancia; para un límite estricto usar Upstash Redis.
 - Los correos de Supabase Auth (recuperar contraseña) usan el SMTP por defecto de Supabase, con
   límite bajo de envíos: configura un SMTP propio (Resend, SES…) antes de lanzar.
-- Mapa de subidas por ubicación GPS (los eventos ya guardan `lat`/`lng`).

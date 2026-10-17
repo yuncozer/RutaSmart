@@ -1,4 +1,4 @@
-# Arquitectura de RutaSmart
+# Arquitectura de RutaSmart RU7
 
 ```
 [Dispositivo ESP32-S3]
@@ -26,19 +26,20 @@
 
 ## Dónde está cada cosa
 
-| Tema                         | Archivo                                                        |
-| ---------------------------- | -------------------------------------------------------------- |
-| Esquema                      | `supabase/migrations/20261014000001_schema.sql`                |
-| RLS                          | `supabase/migrations/20261014000002_rls.sql`                   |
-| Funciones (dashboard, pagos) | `supabase/migrations/20261014000003_functions.sql`             |
-| Estado de suscripción (TS)   | `web/lib/subscription.ts` (espejo de `subscription_status_of`) |
-| Funciones por plan           | `web/lib/plans.ts` + `plans.features` (JSONB)                  |
-| API de dispositivos          | `web/lib/device/handlers.ts` (lógica) y `web/app/api/device/*` |
-| Sesión y rol                 | `web/lib/auth.ts`, `web/middleware.ts`                         |
-| Acciones del admin           | `web/app/admin/actions.ts`                                     |
-| Acciones del cliente         | `web/app/app/actions.ts`                                       |
-| Exportación Excel/CSV        | `web/app/api/reports/route.ts`, `web/lib/reports.ts`           |
-| Cron diario                  | `web/app/api/cron/daily/route.ts`, `web/vercel.json`           |
+| Tema                         | Archivo                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------- |
+| Esquema                      | `supabase/migrations/20261014000001_schema.sql`                                       |
+| RLS                          | `supabase/migrations/20261014000002_rls.sql`                                          |
+| Funciones (dashboard, pagos) | `supabase/migrations/20261014000003_functions.sql`                                    |
+| Estado de suscripción (TS)   | `web/lib/subscription.ts` (espejo de `subscription_status_of`)                        |
+| Funciones por plan           | `web/lib/plans.ts` + `plans.features` (JSONB)                                         |
+| API de dispositivos          | `web/lib/device/handlers.ts` (lógica) y `web/app/api/device/*`                        |
+| Sesión y rol                 | `web/lib/auth.ts`, `web/middleware.ts`                                                |
+| Acciones del admin           | `web/app/admin/actions.ts`                                                            |
+| Acciones del cliente         | `web/app/app/actions.ts`                                                              |
+| Exportación Excel/CSV        | `web/app/api/reports/route.ts`, `web/lib/reports.ts`                                  |
+| Cron diario                  | `web/app/api/cron/daily/route.ts`, `web/vercel.json`                                  |
+| GPS (mapa, recorrido)        | `supabase/migrations/20261016000007_gps.sql`, `web/components/map/`, `web/lib/geo.ts` |
 
 ## Roles
 
@@ -59,3 +60,5 @@
 - `register_device()` / `rotate_device_secret()`: generan el secreto; en la base solo queda el sha256.
 - `enforce_bus_limit` (trigger): bloquea más buses activos que los cubiertos.
 - `refresh_subscription_statuses()`, `generate_alerts()`: tareas del cron diario.
+- `fleet_positions(org)`, `bus_route(bus, fecha)`, `boarding_points(bus, fecha)`,
+  `stop_hotspots(org, desde, hasta, bus?)`: módulo GPS (mismas reglas de acceso que el dashboard).

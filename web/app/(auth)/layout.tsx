@@ -16,7 +16,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </p>
           <p className="text-navy-100/70 mt-4">Conteo automático de pasajeros para autobuses.</p>
         </div>
-        <p className="text-navy-100/50 text-xs">© RutaSmart</p>
+        <p className="text-navy-100/50 text-xs">© RutaSmart RU7</p>
       </aside>
       <main className="flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-sm">

@@ -2,10 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { ThemeProvider } from "@/components/theme-provider";
+import { BRAND_NAME } from "@/lib/brand";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "RutaSmart", template: "%s · RutaSmart" },
+  title: { default: BRAND_NAME, template: `%s · ${BRAND_NAME}` },
   description: "Conteo automático de pasajeros para autobuses.",
 };
 

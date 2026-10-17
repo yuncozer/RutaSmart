@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
+import { BRAND_MODEL } from "@/lib/brand";
 
-/** Logotipo de RutaSmart: ícono de bus estilizado + nombre. */
+/** Logotipo de RutaSmart RU7: ícono de bus estilizado + nombre + modelo. */
 export function Logo({ className, light = false }: { className?: string; light?: boolean }) {
   return (
     <span className={cn("inline-flex items-center gap-2 font-semibold tracking-tight", className)}>
@@ -35,6 +36,16 @@ export function Logo({ className, light = false }: { className?: string; light?:
       </svg>
       <span className={cn("text-lg", light && "text-white")}>
         Ruta<span className="text-accent">Smart</span>
+      </span>
+      <span
+        className={cn(
+          "rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-semibold leading-none tracking-wider",
+          light
+            ? "border-white/25 text-white/80"
+            : "border-navy-900/20 text-navy-700 dark:text-navy-100 dark:border-white/20",
+        )}
+      >
+        {BRAND_MODEL}
       </span>
     </span>
   );

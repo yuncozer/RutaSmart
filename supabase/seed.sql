@@ -60,11 +60,11 @@ update public.profiles set phone = '+58 414 0000001' where id = '00000000-0000-4
 -- -------------------------------------------------------------
 insert into public.plans (id, code, name, monthly_price_usd, features) values
   ('10000000-0000-4000-a000-000000000001', 'basic', 'Básico', 15,
-   '{"daily_counts":true,"export":true,"wifi_sync":true,"max_users":1}'),
+   '{"daily_counts":true,"export":true,"wifi_sync":true,"gps_tracking":true,"max_users":1}'),
   ('10000000-0000-4000-a000-000000000002', 'pro', 'Pro', 25,
-   '{"daily_counts":true,"export":true,"wifi_sync":true,"hourly_dashboard":true,"route_dashboard":true,"comparisons":true,"alerts":true,"driver_exclusion":true,"sim_4g":true,"max_users":3}'),
+   '{"daily_counts":true,"export":true,"wifi_sync":true,"gps_tracking":true,"hourly_dashboard":true,"route_dashboard":true,"comparisons":true,"alerts":true,"driver_exclusion":true,"sim_4g":true,"max_users":3}'),
   ('10000000-0000-4000-a000-000000000003', 'fleet', 'Flota', 35,
-   '{"daily_counts":true,"export":true,"wifi_sync":true,"hourly_dashboard":true,"route_dashboard":true,"comparisons":true,"alerts":true,"driver_exclusion":true,"sim_4g":true,"fleet_view":true,"multi_user":true,"device_status":true,"priority_support":true,"max_users":50}');
+   '{"daily_counts":true,"export":true,"wifi_sync":true,"gps_tracking":true,"hourly_dashboard":true,"route_dashboard":true,"comparisons":true,"alerts":true,"driver_exclusion":true,"sim_4g":true,"fleet_view":true,"multi_user":true,"device_status":true,"priority_support":true,"max_users":50}');
 
 -- -------------------------------------------------------------
 -- Organizaciones
@@ -171,6 +171,22 @@ where d.last_seen_at is not null;
 -- Paradas cada pocos minutos, picos 6–8 am y 5–7 pm,
 -- bajadas ≈ subidas (nunca más bajadas que pasajeros a bordo en el día).
 -- -------------------------------------------------------------
+-- Rutas reales aproximadas (origen → destino) para ubicar paradas y recorridos GPS
+create temp table seed_routes (bus_id uuid primary key, from_lat float8, from_lng float8, to_lat float8, to_lng float8);
+insert into seed_routes values
+  ('40000000-0000-4000-a000-000000000001', 7.7669, -72.2250, 7.8189, -72.2246), -- San Cristóbal – Táriba
+  ('40000000-0000-4000-a000-000000000002', 7.7669, -72.2250, 7.7013, -72.3586), -- San Cristóbal – Rubio
+  ('40000000-0000-4000-a000-000000000003', 7.8891, -72.4967, 7.8869, -72.5370), -- Cúcuta Centro – Atalaya
+  ('40000000-0000-4000-a000-000000000004', 7.7563, -72.2276, 7.7745, -72.2120), -- Terminal – Barrio Obrero
+  ('40000000-0000-4000-a000-000000000005', 7.8337, -72.4720, 7.8939, -72.5078); -- Villa del Rosario – Cúcuta
+
+-- Punto de la ruta en la fracción f (0 = origen, 1 = destino), con una curva suave
+create or replace function pg_temp.route_point(r seed_routes, f float8, out lat float8, out lng float8)
+language sql immutable as $$
+  select r.from_lat + (r.to_lat - r.from_lat) * f + sin(pi() * f) * 0.004,
+         r.from_lng + (r.to_lng - r.from_lng) * f - sin(pi() * f) * 0.003
+$$;
+
 select setseed(0.42);
 
 with buses as (
@@ -204,21 +220,26 @@ boardings as (
   from hours, generate_series(1, greatest(boardings, 0)) g
 ),
 events as (
-  -- cada subida genera una subida y (casi siempre) una bajada posterior
-  select bus_id, organization_id, device_id, lat, lng, 'in' as direction, t_in as occurred_at
+  -- cada subida genera una subida y (casi siempre) una bajada posterior;
+  -- las subidas se concentran en las primeras paradas y las bajadas en las últimas
+  select bus_id, organization_id, device_id, 'in' as direction, t_in as occurred_at,
+         least(11, floor(power(random(), 1.6) * 12))::int as stop
   from boardings
   union all
-  select bus_id, organization_id, device_id, lat, lng, 'out',
-         t_in + make_interval(mins => 4 + (random() * 40)::int)
+  select bus_id, organization_id, device_id, 'out',
+         t_in + make_interval(mins => 4 + (random() * 40)::int),
+         least(11, floor((1 - power(random(), 1.6)) * 12))::int
   from boardings
   where random() < 0.97
 )
 insert into public.count_events (id, device_id, bus_id, organization_id, occurred_at, direction, is_driver, confidence, lat, lng)
-select gen_random_uuid(), device_id, bus_id, organization_id, occurred_at, direction, false,
+select gen_random_uuid(), ev.device_id, ev.bus_id, ev.organization_id, ev.occurred_at, ev.direction, false,
        round((0.8 + random() * 0.19)::numeric, 2)::real,
-       lat + (random() - 0.5) * 0.03, lng + (random() - 0.5) * 0.03
-from events
-where occurred_at <= now();
+       pt.lat + (random() - 0.5) * 0.0004, pt.lng + (random() - 0.5) * 0.0004
+from events ev
+join seed_routes r on r.bus_id = ev.bus_id
+cross join lateral pg_temp.route_point(r, ev.stop / 11.0) pt
+where ev.occurred_at <= now();
 
 -- Cruces del conductor (2–6 por día; se excluyen de los totales)
 insert into public.count_events (id, device_id, bus_id, organization_id, occurred_at, direction, is_driver, confidence)
@@ -234,6 +255,41 @@ cross join lateral generate_series(1, 2 + (random() * 4)::int) g
 where ((day::date + interval '5 hours') at time zone o.timezone) <= now();
 
 delete from public.count_events where occurred_at > now();
+
+-- -------------------------------------------------------------
+-- Recorridos GPS de los últimos 3 días (un punto por minuto, 5:30–21:00)
+-- Viajes ida/vuelta de 60 min con 10 min de descanso en terminal.
+-- -------------------------------------------------------------
+insert into public.device_positions (id, device_id, bus_id, organization_id, recorded_at, lat, lng, speed_kmh, heading, accuracy_m, satellites)
+select gen_random_uuid(), d.id, b.id, b.organization_id, t.ts,
+       pt.lat + (random() - 0.5) * 0.0002, pt.lng + (random() - 0.5) * 0.0002,
+       case when t.phase >= 60 then 0 else round((15 + random() * 25)::numeric, 1) end,
+       (random() * 359)::int, round((3 + random() * 6)::numeric, 1), 7 + (random() * 6)::int
+from public.buses b
+join public.organizations o on o.id = b.organization_id
+join public.devices d on d.bus_id = b.id
+join seed_routes r on r.bus_id = b.id
+cross join lateral (
+  select ((day::date + make_interval(hours => 5, mins => 30 + m)) at time zone o.timezone) as ts,
+         m % 70 as phase,
+         (m / 70) % 2 as back
+  from generate_series(current_date - 2, current_date, interval '1 day') day,
+       generate_series(0, 929) m
+) t
+cross join lateral pg_temp.route_point(
+  r,
+  case when t.back = 0 then least(t.phase, 60) / 60.0 else 1 - least(t.phase, 60) / 60.0 end
+) pt
+where t.ts <= now() and d.status = 'active';
+
+-- Última posición conocida en el dispositivo
+update public.devices d
+set last_lat = p.lat, last_lng = p.lng
+from (
+  select distinct on (device_id) device_id, lat, lng
+  from public.device_positions order by device_id, recorded_at desc
+) p
+where p.device_id = d.id;
 
 -- -------------------------------------------------------------
 -- Alertas de ejemplo

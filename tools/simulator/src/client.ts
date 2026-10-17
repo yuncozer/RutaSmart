@@ -61,6 +61,7 @@ export interface ConfigResponse {
   assigned: boolean;
   server_time: string;
   sync_interval_s: number;
+  gps_interval_s?: number;
   driver_exclusion_enabled: boolean;
   firmware: { update_available: boolean; version?: string; url?: string; sha256?: string };
 }

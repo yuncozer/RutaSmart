@@ -23,6 +23,24 @@ export const eventsBodySchema = z.object({
   events: z.array(z.unknown()).min(1).max(MAX_EVENTS_PER_REQUEST),
 });
 
+export const MAX_POSITIONS_PER_REQUEST = 1000;
+
+export const positionSchema = z.object({
+  id: z.string().uuid(),
+  recorded_at: z.string().datetime({ offset: true }),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  speed_kmh: z.number().min(0).max(250).nullable().optional(),
+  heading: z.number().int().min(0).max(359).nullable().optional(),
+  accuracy_m: z.number().min(0).nullable().optional(),
+  satellites: z.number().int().min(0).max(64).nullable().optional(),
+});
+export type PositionInput = z.infer<typeof positionSchema>;
+
+export const positionsBodySchema = z.object({
+  positions: z.array(z.unknown()).min(1).max(MAX_POSITIONS_PER_REQUEST),
+});
+
 export const heartbeatSchema = z.object({
   battery: z.number().int().min(0).max(100).nullable().optional(),
   rssi: z.number().int().min(-150).max(0).nullable().optional(),

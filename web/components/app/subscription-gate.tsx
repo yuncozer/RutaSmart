@@ -10,7 +10,7 @@ import type { AppContext } from "@/lib/auth";
 import type { PlanFeatures } from "@/lib/types";
 
 export function PaymentInstructions({ orgName }: { orgName: string }) {
-  const wa = whatsappLink(`Hola, adjunto el comprobante de pago de RutaSmart para ${orgName}.`);
+  const wa = whatsappLink(`Hola, adjunto el comprobante de pago de RutaSmart RU7 para ${orgName}.`);
   return (
     <div className="space-y-3">
       <ul className="space-y-2 text-sm">

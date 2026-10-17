@@ -2,7 +2,7 @@
 export const env = {
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
-  appName: process.env.NEXT_PUBLIC_APP_NAME ?? "RutaSmart",
+  appName: process.env.NEXT_PUBLIC_APP_NAME ?? "RutaSmart RU7",
 };
 
 export const isSupabaseConfigured = () => Boolean(env.supabaseUrl && env.supabaseAnonKey);

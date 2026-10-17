@@ -51,6 +51,7 @@ export interface PlanFeatures {
   daily_counts?: boolean;
   export?: boolean;
   wifi_sync?: boolean;
+  gps_tracking?: boolean;
   hourly_dashboard?: boolean;
   route_dashboard?: boolean;
   comparisons?: boolean;
